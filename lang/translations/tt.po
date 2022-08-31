@@ -12,29 +12,29 @@
 #
 msgid ""
 msgstr ""
-"Language-Team: Urdu (https://www.transifex.com/ckeditor/teams/11143/ur/)\n"
-"Language: ur\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language-Team: Tatar (https://www.transifex.com/ckeditor/teams/11143/tt/)\n"
+"Language: tt\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 msgctxt "Label for the insert table toolbar button."
 msgid "Insert table"
-msgstr "جدول داخل کریں"
+msgstr ""
 
 msgctxt "Label for the set/unset table header column button."
 msgid "Header column"
-msgstr "سر ستون"
+msgstr ""
 
 msgctxt "Label for the insert table column to the left of the current one button."
 msgid "Insert column left"
-msgstr "بائیں جانب کالم بنائیں"
+msgstr ""
 
 msgctxt "Label for the insert table column to the right of the current one button."
 msgid "Insert column right"
-msgstr "دائیں جانب کالم بنائیں"
+msgstr ""
 
 msgctxt "Label for the delete table column button."
 msgid "Delete column"
-msgstr "ستون حذف کریں"
+msgstr ""
 
 msgctxt "Label for the select the entire table column button."
 msgid "Select column"
@@ -42,23 +42,23 @@ msgstr ""
 
 msgctxt "Label for the table column dropdown button."
 msgid "Column"
-msgstr "ستون"
+msgstr ""
 
 msgctxt "Label for the set/unset table header row button."
 msgid "Header row"
-msgstr "سر قطار"
+msgstr ""
 
 msgctxt "Label for the insert row below button."
 msgid "Insert row below"
-msgstr "قطار زیریں نصب کریں"
+msgstr ""
 
 msgctxt "Label for the insert row above button."
 msgid "Insert row above"
-msgstr "قطار بالا نصب کریں"
+msgstr ""
 
 msgctxt "Label for the delete table row button."
 msgid "Delete row"
-msgstr "قطار حذف کریں"
+msgstr ""
 
 msgctxt "Label for the select the entire table row button."
 msgid "Select row"
@@ -66,39 +66,39 @@ msgstr ""
 
 msgctxt "Label for the table row dropdown button."
 msgid "Row"
-msgstr "قطار"
+msgstr ""
 
 msgctxt "Label for the merge table cell up button."
 msgid "Merge cell up"
-msgstr "سیل اوپر یکجا کریں"
+msgstr ""
 
 msgctxt "Label for the merge table cell right button."
 msgid "Merge cell right"
-msgstr "سیل دائیں طرف یکجا کریں"
+msgstr ""
 
 msgctxt "Label for the merge table cell down button."
 msgid "Merge cell down"
-msgstr "سیل نچلی طرف یکجا کریں"
+msgstr ""
 
 msgctxt "Label for the merge table cell left button."
 msgid "Merge cell left"
-msgstr "سیل بائیں طرف یکجا کریں"
+msgstr ""
 
 msgctxt "Label for the split table cell vertically button."
 msgid "Split cell vertically"
-msgstr "سیل کی عمودی تقسیم"
+msgstr ""
 
 msgctxt "Label for the split table cell horizontally button."
 msgid "Split cell horizontally"
-msgstr "سیل کی افقی تقسیم"
+msgstr ""
 
 msgctxt "Label for the merge table cells button."
 msgid "Merge cells"
-msgstr "سیل یکجا کریں"
+msgstr ""
 
 msgctxt "The label used by assistive technologies describing a table toolbar attached to a table widget."
 msgid "Table toolbar"
-msgstr "آلہ جات برائے جدول"
+msgstr ""
 
 msgctxt "The label describing the form allowing to specify the properties of a selected table."
 msgid "Table properties"
@@ -110,7 +110,7 @@ msgstr ""
 
 msgctxt "The label describing a group of border–related form fields (border style, color, etc.)."
 msgid "Border"
-msgstr "حاشیہ"
+msgstr ""
 
 msgctxt "The label for the dropdown that allows configuring the border style of a table or a table cell."
 msgid "Style"
@@ -118,15 +118,15 @@ msgstr ""
 
 msgctxt "The label for the input that allows configuring the width of a table or a table cell or the width of a border."
 msgid "Width"
-msgstr "چوڑائی"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the height of a table or a table cell."
 msgid "Height"
-msgstr "اونچائی"
+msgstr ""
 
 msgctxt "The label for the input that allows configuring the border color of a table or a table cell."
 msgid "Color"
-msgstr "رنگ"
+msgstr "Төс"
 
 msgctxt "The label for the input that allows configuring the background color of a table or a table cell."
 msgid "Background"
@@ -170,15 +170,15 @@ msgstr ""
 
 msgctxt "The label for the border style dropdown when the dotted border is applied to a table or a table cell."
 msgid "Dotted"
-msgstr "نقطہ دار"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the dashed border is applied to a table or a table cell."
 msgid "Dashed"
-msgstr "قطعہ دار"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the double border is applied to a table or a table cell."
 msgid "Double"
-msgstr "دو گنا"
+msgstr ""
 
 msgctxt "The label for the border style dropdown when the groove border is applied to a table or a table cell."
 msgid "Groove"
