@@ -36,6 +36,7 @@
 	"Vertical text alignment toolbar": "The label used by assistive technologies describing a toolbar that allows configuring the vertical text alignment in a table cell.",
 	"Table alignment toolbar": "The label used by assistive technologies describing a toolbar that allows configuring the alignment of a table.",
 	"None": "The label for the border style dropdown when no style is applied to a table or a table cell.",
+	"Underline": "The label for the border style dropdown when the underline border is applied to a table or a table cell.",
 	"Solid": "The label for the border style dropdown when the solid border is applied to a table or a table cell.",
 	"Dotted": "The label for the border style dropdown when the dotted border is applied to a table or a table cell.",
 	"Dashed": "The label for the border style dropdown when the dashed border is applied to a table or a table cell.",

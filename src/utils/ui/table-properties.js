@@ -20,6 +20,7 @@ const isEmpty = (val) => val === '';
 export function getBorderStyleLabels(t) {
     return {
         none: t('None'),
+        underline: t('Underline'),
         solid: t('Solid'),
         dotted: t('Dotted'),
         dashed: t('Dashed'),
