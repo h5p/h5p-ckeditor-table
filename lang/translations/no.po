@@ -166,7 +166,7 @@ msgid "None"
 msgstr "Ingen"
 
 msgctxt "The label for the border style dropdown when the underline border is applied to a table or a table cell."
-msgid "Underline"
+msgid "Table underline"
 msgstr "Understrek"
 
 msgctxt "The label for the border style dropdown when the solid border is applied to a table or a table cell."
