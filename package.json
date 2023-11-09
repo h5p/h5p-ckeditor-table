@@ -1,6 +1,6 @@
 {
   "name": "@h5p/ckeditor5-table",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The H5P version of the CKEditor 5 table plugin.",
   "keywords": [
     "ckeditor",
