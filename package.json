@@ -11,7 +11,7 @@
     "ckeditor5-dll",
     "ckeditor5-package-generator"
   ],
-  "main": "src/index.ts",
+  "main": "src/index.js",
   "license": "MIT",
   "repository": {
     "type": "git",
