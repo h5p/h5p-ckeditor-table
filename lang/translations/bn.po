@@ -165,6 +165,10 @@ msgctxt "The label for the border style dropdown when no style is applied to a t
 msgid "None"
 msgstr "কোনোটিই নয়"
 
+msgctxt "The label for the border style dropdown when the underline border is applied to a table or a table cell."
+msgid "Underline"
+msgstr ""
+
 msgctxt "The label for the border style dropdown when the solid border is applied to a table or a table cell."
 msgid "Solid"
 msgstr "সলিড"
