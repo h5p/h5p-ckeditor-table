@@ -31,7 +31,7 @@ export default class TableWidthsCommand extends Command {
         }
         model.change(writer => {
             if (tableWidth) {
-                writer.setAttribute('tableWidth', tableWidth, table);
+                writer.setAttribute('tableWidth', getTableWidthInPixels(table, this.editor) + 'px', table);
             }
             else {
                 writer.removeAttribute('tableWidth', table);
