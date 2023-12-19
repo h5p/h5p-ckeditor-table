@@ -3,7 +3,7 @@
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 import { Command } from 'ckeditor5/src/core';
-import { normalizeColumnWidths } from './utils';
+import { getTableWidthInPixels, normalizeColumnWidths } from './utils';
 /**
  * Command used by the {@link module:table/tablecolumnresize~TableColumnResize Table column resize feature} that
  * updates the width of the whole table as well as its individual columns.
