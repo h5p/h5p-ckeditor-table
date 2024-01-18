@@ -4,6 +4,8 @@
  */
 import { Command } from 'ckeditor5/src/core';
 import { getTableWidthInPixels, normalizeColumnWidths } from './utils';
+import TableWalker from './../tablewalker';
+
 /**
  * Command used by the {@link module:table/tablecolumnresize~TableColumnResize Table column resize feature} that
  * updates the width of the whole table as well as its individual columns.
@@ -30,11 +32,30 @@ export default class TableWidthsCommand extends Command {
                 columnWidths.split(',');
         }
         model.change(writer => {
+            const tableWalker = new TableWalker(table, { includeAllSlots: true });
+            const childTables = [];
+            for (const tableSlot of tableWalker) {
+                childTables.push(...Array.from(tableSlot.cell.getChildren())
+                .filter(child => child.name === 'table'));
+            }
+
             if (tableWidth) {
+                // Prevent overflow for nested tables
+                if (table.findAncestor('table')?.getAttribute('tableWidth')) {
+                    writer.setAttribute('maxWidth', '100%', table);
+                }
+                for (const child of childTables) {
+                    writer.setAttribute('maxWidth', '100%', child);
+                }
+
                 writer.setAttribute('tableWidth', getTableWidthInPixels(table, this.editor) + 'px', table);
             }
             else {
                 writer.removeAttribute('tableWidth', table);
+
+                for (const child of childTables) {
+                    writer.removeAttribute('maxWidth', child);
+                }
             }
             const tableColumnGroup = plugins
                 .get('TableColumnResizeEditing')

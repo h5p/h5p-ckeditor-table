@@ -117,7 +117,7 @@ export default class TableColumnResizeEditing extends Plugin {
      */
     _extendSchema() {
         this.editor.model.schema.extend('table', {
-            allowAttributes: ['tableWidth']
+            allowAttributes: ['tableWidth', 'maxWidth']
         });
         this.editor.model.schema.register('tableColumnGroup', {
             allowIn: 'table',
@@ -249,6 +249,34 @@ export default class TableColumnResizeEditing extends Plugin {
                 key: 'style',
                 value: {
                     width
+                }
+            })
+        });
+        // Table max width style
+        conversion.for('upcast').attributeToAttribute({
+            view: {
+                name: 'figure',
+                key: 'style',
+                value: {
+                    'max-width': /[\s\S]+/
+                }
+            },
+            model: {
+                name: 'table',
+                key: 'maxWidth',
+                value: (viewElement) => viewElement.getStyle('max-width')
+            }
+        });
+        conversion.for('downcast').attributeToAttribute({
+            model: {
+                name: 'table',
+                key: 'maxWidth'
+            },
+            view: (maxWidth) => ({
+                name: 'figure',
+                key: 'style',
+                value: {
+                    'max-width': maxWidth
                 }
             })
         });
