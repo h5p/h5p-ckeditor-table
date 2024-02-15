@@ -35,12 +35,27 @@ export declare function getColumnMinWidthAsPercentage(modelTable: Element, edito
  */
 export declare function getTableWidthInPixels(modelTable: Element, editor: Editor): number;
 /**
+ * Calculates the table width in ems.
+ *
+ * @param modelTable A table model element.
+ * @param editor The editor instance.
+ * @returns The width of the table in ems.
+ */
+export function getTableWidthInEms(modelTable: Element, editor: Editor): number;
+/**
  * Returns the computed width (in pixels) of the DOM element without padding and borders.
  *
  * @param domElement A DOM element.
  * @returns The width of the DOM element in pixels.
  */
 export declare function getElementWidthInPixels(domElement: HTMLElement): number;
+/**
+ * Returns the computed width (in ems) of the DOM element without padding and borders.
+ *
+ * @param domElement A DOM element.
+ * @returns The width of the DOM element in ems.
+ */
+export function getElementWidthInEms(domElement: HTMLElement): number;
 /**
  * Returns the column indexes on the left and right edges of a cell. They differ if the cell spans
  * across multiple columns.

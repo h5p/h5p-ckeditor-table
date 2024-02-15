@@ -3,7 +3,7 @@
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 import { Command } from 'ckeditor5/src/core';
-import { getTableWidthInPixels, normalizeColumnWidths } from './utils';
+import { getTableWidthInEms, normalizeColumnWidths } from './utils';
 import TableWalker from './../tablewalker';
 
 /**
@@ -48,7 +48,7 @@ export default class TableWidthsCommand extends Command {
                     writer.setAttribute('maxWidth', '100%', child);
                 }
 
-                writer.setAttribute('tableWidth', getTableWidthInPixels(table, this.editor) + 'px', table);
+                writer.setAttribute('tableWidth', getTableWidthInEms(table, this.editor) + 'em', table);
             }
             else {
                 writer.removeAttribute('tableWidth', table);
