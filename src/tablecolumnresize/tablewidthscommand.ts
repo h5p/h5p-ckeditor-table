@@ -9,7 +9,8 @@
 
 import type { Element } from 'ckeditor5/src/engine';
 import { Command } from 'ckeditor5/src/core';
-import { normalizeColumnWidths } from './utils';
+import { getTableWidthInEms, normalizeColumnWidths } from './utils';
+import TableWalker from './../tablewalker';
 
 /**
  * Command used by the {@link module:table/tablecolumnresize~TableColumnResize Table column resize feature} that
@@ -44,11 +45,32 @@ export default class TableWidthsCommand extends Command {
 		}
 
 		model.change( writer => {
-			if ( tableWidth ) {
-				writer.setAttribute( 'tableWidth', tableWidth, table );
-			} else {
-				writer.removeAttribute( 'tableWidth', table );
-			}
+			const tableWalker = new TableWalker(table, { includeAllSlots: true });
+            const childTables = [];
+            for (const tableSlot of tableWalker) {
+                childTables.push(...Array.from(tableSlot.cell.getChildren())
+                .filter(child => child.name === 'table'));
+            }
+
+            if (tableWidth) {
+                writer.setAttribute('tableWidth', tableWidth, table);
+                // Prevent overflow for nested tables
+                if (table.findAncestor('table')?.getAttribute('tableWidth')) {
+                    writer.setAttribute('maxWidth', '100%', table);
+                }
+                for (const child of childTables) {
+                    writer.setAttribute('maxWidth', '100%', child);
+                }
+
+                writer.setAttribute('tableWidth', getTableWidthInEms(table, this.editor) + 'em', table);
+            }
+            else {
+                writer.removeAttribute('tableWidth', table);
+
+                for (const child of childTables) {
+                    writer.removeAttribute('maxWidth', child);
+                }
+            }
 
 			const tableColumnGroup = plugins
 				.get( 'TableColumnResizeEditing' )

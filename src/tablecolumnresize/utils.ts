@@ -112,6 +112,20 @@ export function getTableWidthInPixels( modelTable: Element, editor: Editor ): nu
 }
 
 /**
+ * Calculates the table width in ems.
+ *
+ * @param modelTable A table model element.
+ * @param editor The editor instance.
+ * @returns The width of the table in ems.
+ */
+export function getTableWidthInEms(modelTable: Element, editor: Editor): number {
+    // It is possible for a table to not have a <tbody> element - see #11878.
+    const referenceElement = getChildrenViewElement(modelTable, 'tbody', editor) || getChildrenViewElement(modelTable, 'thead', editor);
+    const domReferenceElement = editor.editing.view.domConverter.mapViewToDom(referenceElement);
+    return getElementWidthInEms(domReferenceElement);
+}
+
+/**
  * Returns the a view element with a given name that is nested directly in a `<table>` element
  * related to a given `modelTable`.
  *
@@ -147,6 +161,32 @@ export function getElementWidthInPixels( domElement: HTMLElement ): number {
 	} else {
 		return parseFloat( styles.width );
 	}
+}
+
+/**
+ * Returns the computed width (in ems) of the DOM element without padding and borders.
+ *
+ * @param domElement A DOM element.
+ * @returns The width of the DOM element in ems.
+ */
+export function getElementWidthInEms(domElement: HTMLElement): number {
+    const styles = global.window.getComputedStyle(domElement);
+    let width = parseFloat(styles.width);
+    // In the 'border-box' box sizing algorithm, the element's width
+    // already includes the padding and border width (#12335).
+    if (styles.boxSizing === 'border-box') {
+        width = parseFloat(styles.width) -
+            parseFloat(styles.paddingLeft) -
+            parseFloat(styles.paddingRight) -
+            parseFloat(styles.borderLeftWidth) -
+            parseFloat(styles.borderRightWidth);
+    }
+
+    return width / parseFloat(
+        getComputedStyle(
+            document.querySelector('html')
+        )['font-size']
+    );
 }
 
 /**

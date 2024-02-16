@@ -39,6 +39,7 @@ const isEmpty = ( val: string ) => val === '';
 export function getBorderStyleLabels( t: LocaleTranslate ): Record<string, string> {
 	return {
 		none: t( 'None' ),
+		underline: t('Table underline'),
 		solid: t( 'Solid' ),
 		dotted: t( 'Dotted' ),
 		dashed: t( 'Dashed' ),
