@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
 * @module table/tablecaption/tablecaptionui
 */
-import { Plugin, icons } from 'ckeditor5/src/core';
-import { ButtonView } from 'ckeditor5/src/ui';
-import { getCaptionFromModelSelection } from './utils';
+import { Plugin, icons } from 'ckeditor5/src/core.js';
+import { ButtonView } from 'ckeditor5/src/ui.js';
+import { getCaptionFromModelSelection } from './utils.js';
 /**
   * The table caption UI plugin. It introduces the `'toggleTableCaption'` UI button.
   */

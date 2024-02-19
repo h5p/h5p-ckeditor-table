@@ -1,11 +1,11 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecaption/utils
  */
-import type { DocumentFragment, DocumentSelection, Element, ViewElement } from 'ckeditor5/src/engine';
+import type { DocumentFragment, DocumentSelection, Element, ViewElement } from 'ckeditor5/src/engine.js';
 /**
  * Checks if the provided model element is a `table`.
  *
@@ -36,7 +36,3 @@ export declare function getCaptionFromModelSelection(selection: DocumentSelectio
 export declare function matchTableCaptionViewElement(element: ViewElement): {
     name: true;
 } | null;
-/**
- * Depending on the position of the selection we either return the table under cursor or look for the table higher in the hierarchy.
- */
-export declare function getSelectionAffectedTable(selection: DocumentSelection): Element;

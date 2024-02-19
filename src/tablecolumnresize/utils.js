@@ -1,9 +1,9 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
-import { global } from 'ckeditor5/src/utils';
-import { COLUMN_WIDTH_PRECISION, COLUMN_MIN_WIDTH_AS_PERCENTAGE, COLUMN_MIN_WIDTH_IN_PIXELS } from './constants';
+import { global } from 'ckeditor5/src/utils.js';
+import { COLUMN_WIDTH_PRECISION, COLUMN_MIN_WIDTH_AS_PERCENTAGE, COLUMN_MIN_WIDTH_IN_PIXELS } from './constants.js';
 /**
  * Returns all the inserted or changed table model elements in a given change set. Only the tables
  * with 'columnsWidth' attribute are taken into account. The returned set may be empty.

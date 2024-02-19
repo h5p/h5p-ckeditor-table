@@ -1,7 +1,8 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
+import { getSelectionAffectedTable } from '../utils/common.js';
 /**
  * Checks if the provided model element is a `table`.
  *
@@ -53,15 +54,4 @@ export function matchTableCaptionViewElement(element) {
         return { name: true };
     }
     return null;
-}
-/**
- * Depending on the position of the selection we either return the table under cursor or look for the table higher in the hierarchy.
- */
-export function getSelectionAffectedTable(selection) {
-    const selectedElement = selection.getSelectedElement();
-    // Is the command triggered from the `tableToolbar`?
-    if (selectedElement && selectedElement.is('element', 'table')) {
-        return selectedElement;
-    }
-    return selection.getFirstPosition().findAncestor('table');
 }

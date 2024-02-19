@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableproperties/commands/tableheightcommand
  */
-import TablePropertyCommand from './tablepropertycommand';
-import { addDefaultUnitToNumericValue } from '../../utils/table-properties';
+import TablePropertyCommand from './tablepropertycommand.js';
+import { addDefaultUnitToNumericValue } from '../../utils/table-properties.js';
 /**
  * The table height command.
  *

@@ -1,13 +1,14 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/utils/ui/contextualballoon
  */
-import { Rect } from 'ckeditor5/src/utils';
-import { BalloonPanelView } from 'ckeditor5/src/ui';
-import { getTableWidgetAncestor } from './widget';
+import { Rect } from 'ckeditor5/src/utils.js';
+import { BalloonPanelView } from 'ckeditor5/src/ui.js';
+import { getSelectionAffectedTableWidget, getTableWidgetAncestor } from './widget.js';
+import { getSelectionAffectedTable } from '../common.js';
 const DEFAULT_BALLOON_POSITIONS = BalloonPanelView.defaultPositions;
 const BALLOON_POSITIONS = [
     DEFAULT_BALLOON_POSITIONS.northArrowSouth,
@@ -28,14 +29,17 @@ const BALLOON_POSITIONS = [
  */
 export function repositionContextualBalloon(editor, target) {
     const balloon = editor.plugins.get('ContextualBalloon');
-    if (getTableWidgetAncestor(editor.editing.view.document.selection)) {
-        let position;
-        if (target === 'cell') {
+    const selection = editor.editing.view.document.selection;
+    let position;
+    if (target === 'cell') {
+        if (getTableWidgetAncestor(selection)) {
             position = getBalloonCellPositionData(editor);
         }
-        else {
-            position = getBalloonTablePositionData(editor);
-        }
+    }
+    else if (getSelectionAffectedTableWidget(selection)) {
+        position = getBalloonTablePositionData(editor);
+    }
+    if (position) {
         balloon.updatePosition(position);
     }
 }
@@ -47,8 +51,8 @@ export function repositionContextualBalloon(editor, target) {
  * @param editor The editor instance.
  */
 export function getBalloonTablePositionData(editor) {
-    const firstPosition = editor.model.document.selection.getFirstPosition();
-    const modelTable = firstPosition.findAncestor('table');
+    const selection = editor.model.document.selection;
+    const modelTable = getSelectionAffectedTable(selection);
     const viewTable = editor.editing.mapper.toViewElement(modelTable);
     return {
         target: editor.editing.view.domConverter.mapViewToDom(viewTable),

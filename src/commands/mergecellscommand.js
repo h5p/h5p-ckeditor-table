@@ -1,11 +1,11 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
-import { Command } from 'ckeditor5/src/core';
-import TableUtils from '../tableutils';
-import { updateNumericAttribute } from '../utils/common';
-import { removeEmptyRowsColumns } from '../utils/structure';
+import { Command } from 'ckeditor5/src/core.js';
+import TableUtils from '../tableutils.js';
+import { updateNumericAttribute } from '../utils/common.js';
+import { removeEmptyRowsColumns } from '../utils/structure.js';
 /**
  * The merge cells command.
  *

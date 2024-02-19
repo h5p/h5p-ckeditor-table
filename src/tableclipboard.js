@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
-import { Plugin } from 'ckeditor5/src/core';
-import TableSelection from './tableselection';
-import TableWalker from './tablewalker';
-import TableUtils from './tableutils';
-import { cropTableToDimensions, getHorizontallyOverlappingCells, getVerticallyOverlappingCells, removeEmptyRowsColumns, splitHorizontally, splitVertically, trimTableCellIfNeeded, adjustLastRowIndex, adjustLastColumnIndex } from './utils/structure';
+import { Plugin } from 'ckeditor5/src/core.js';
+import TableSelection from './tableselection.js';
+import TableWalker from './tablewalker.js';
+import TableUtils from './tableutils.js';
+import { cropTableToDimensions, getHorizontallyOverlappingCells, getVerticallyOverlappingCells, removeEmptyRowsColumns, splitHorizontally, splitVertically, trimTableCellIfNeeded, adjustLastRowIndex, adjustLastColumnIndex } from './utils/structure.js';
 /**
  * This plugin adds support for copying/cutting/pasting fragments of tables.
  * It is loaded automatically by the {@link module:table/table~Table} plugin.

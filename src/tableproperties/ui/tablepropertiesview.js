@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableproperties/ui/tablepropertiesview
  */
-import { addListToDropdown, ButtonView, createLabeledDropdown, createLabeledInputText, FocusCycler, FormHeaderView, LabeledFieldView, LabelView, submitHandler, ToolbarView, View, ViewCollection } from 'ckeditor5/src/ui';
-import { FocusTracker, KeystrokeHandler } from 'ckeditor5/src/utils';
-import { icons } from 'ckeditor5/src/core';
-import { fillToolbar, getBorderStyleDefinitions, getBorderStyleLabels, getLabeledColorInputCreator } from '../../utils/ui/table-properties';
-import FormRowView from '../../ui/formrowview';
+import { addListToDropdown, ButtonView, createLabeledDropdown, createLabeledInputText, FocusCycler, FormHeaderView, LabeledFieldView, LabelView, submitHandler, ToolbarView, View, ViewCollection } from 'ckeditor5/src/ui.js';
+import { FocusTracker, KeystrokeHandler } from 'ckeditor5/src/utils.js';
+import { icons } from 'ckeditor5/src/core.js';
+import { fillToolbar, getBorderStyleDefinitions, getBorderStyleLabels, getLabeledColorInputCreator } from '../../utils/ui/table-properties.js';
+import FormRowView from '../../ui/formrowview.js';
 import '../../../theme/form.css';
 import '../../../theme/tableform.css';
 import '../../../theme/tableproperties.css';
@@ -152,13 +152,22 @@ export default class TablePropertiesView extends View {
         submitHandler({
             view: this
         });
+        // Maintain continuous focus cycling over views that have focusable children and focus cyclers themselves.
+        [this.borderColorInput, this.backgroundInput].forEach(view => {
+            view.fieldView.focusCycler.on('forwardCycle', evt => {
+                this._focusCycler.focusNext();
+                evt.stop();
+            });
+            view.fieldView.focusCycler.on('backwardCycle', evt => {
+                this._focusCycler.focusPrevious();
+                evt.stop();
+            });
+        });
         [
             this.borderStyleDropdown,
             this.borderColorInput,
-            this.borderColorInput.fieldView.dropdownView.buttonView,
             this.borderWidthInput,
             this.backgroundInput,
-            this.backgroundInput.fieldView.dropdownView.buttonView,
             this.widthInput,
             this.heightInput,
             this.alignmentToolbar,

@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/converters/downcast
  */
-import { toWidget, toWidgetEditable } from 'ckeditor5/src/widget';
-import TableWalker from './../tablewalker';
+import { toWidget, toWidgetEditable } from 'ckeditor5/src/widget.js';
+import TableWalker from './../tablewalker.js';
 /**
  * Model table element to view table element conversion helper.
  */

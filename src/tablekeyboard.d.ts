@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablekeyboard
  */
-import TableSelection from './tableselection';
-import TableUtils from './tableutils';
-import { Plugin } from 'ckeditor5/src/core';
-import { type ArrowKeyCodeDirection } from 'ckeditor5/src/utils';
-import type { Element } from 'ckeditor5/src/engine';
+import TableSelection from './tableselection.js';
+import TableUtils from './tableutils.js';
+import { Plugin } from 'ckeditor5/src/core.js';
+import { type ArrowKeyCodeDirection } from 'ckeditor5/src/utils.js';
+import type { Element } from 'ckeditor5/src/engine.js';
 /**
  * This plugin enables keyboard navigation for tables.
  * It is loaded automatically by the {@link module:table/table~Table} plugin.

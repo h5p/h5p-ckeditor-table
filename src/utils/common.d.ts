@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/utils/common
  */
-import type { Conversion, Element, Item, Position, Schema, Writer } from 'ckeditor5/src/engine';
-import type TableUtils from '../tableutils';
+import type { Conversion, Element, Item, Position, Schema, Writer, DocumentSelection } from 'ckeditor5/src/engine.js';
+import type TableUtils from '../tableutils.js';
 /**
  * A common method to update the numeric value. If a value is the default one, it will be unset.
  *
@@ -40,3 +40,7 @@ export declare function enableProperty(schema: Schema, conversion: Conversion, o
     defaultValue: string;
     reduceBoxSides?: boolean;
 }): void;
+/**
+ * Depending on the position of the selection we either return the table under cursor or look for the table higher in the hierarchy.
+ */
+export declare function getSelectionAffectedTable(selection: DocumentSelection): Element;

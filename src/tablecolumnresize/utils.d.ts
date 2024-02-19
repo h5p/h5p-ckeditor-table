@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecolumnresize/utils
  */
-import type { Editor } from 'ckeditor5/src/core';
-import type { Element, Model, Writer } from 'ckeditor5/src/engine';
-import type TableUtils from '../tableutils';
+import type { Editor } from 'ckeditor5/src/core.js';
+import type { Element, Model, Writer } from 'ckeditor5/src/engine.js';
+import type TableUtils from '../tableutils.js';
 /**
  * Returns all the inserted or changed table model elements in a given change set. Only the tables
  * with 'columnsWidth' attribute are taken into account. The returned set may be empty.

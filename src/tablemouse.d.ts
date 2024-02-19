@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablemouse
  */
-import { Plugin } from 'ckeditor5/src/core';
-import TableSelection from './tableselection';
-import TableUtils from './tableutils';
+import { Plugin } from 'ckeditor5/src/core.js';
+import TableSelection from './tableselection.js';
+import TableUtils from './tableutils.js';
 /**
  * This plugin enables a table cells' selection with the mouse.
  * It is loaded automatically by the {@link module:table/table~Table} plugin.

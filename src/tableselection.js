@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableselection
  */
-import { Plugin } from 'ckeditor5/src/core';
-import { first } from 'ckeditor5/src/utils';
-import TableWalker from './tablewalker';
-import TableUtils from './tableutils';
-import { cropTableToDimensions, adjustLastRowIndex, adjustLastColumnIndex } from './utils/structure';
+import { Plugin } from 'ckeditor5/src/core.js';
+import { first } from 'ckeditor5/src/utils.js';
+import TableWalker from './tablewalker.js';
+import TableUtils from './tableutils.js';
+import { cropTableToDimensions, adjustLastRowIndex, adjustLastColumnIndex } from './utils/structure.js';
 import '../theme/tableselection.css';
 /**
  * This plugin enables the advanced table cells, rows and columns selection.
