@@ -61,6 +61,6 @@
   "types": "src/index.d.ts",
   "scripts": {
     "dll:build": "webpack",
-    "build": "webpack --mode production"
+    "build": "tsc -p ./tsconfig.json"
   }
 }
