@@ -10,7 +10,7 @@
     "ckeditor5-plugin",
     "ckeditor5-dll"
   ],
-  "main": "src/index.ts",
+  "main": "src/index.js",
   "dependencies": {
     "ckeditor5": "39.0.2",
     "lodash-es": "4.17.21"
@@ -61,6 +61,6 @@
   "types": "src/index.d.ts",
   "scripts": {
     "dll:build": "webpack",
-    "build": "tsc -p ./tsconfig.json"
+    "build": "webpack --mode production"
   }
 }
