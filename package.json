@@ -60,6 +60,6 @@
   ],
   "scripts": {
     "dll:build": "webpack",
-    "build": "webpack --mode production"
+    "build": "tsc -p ./tsconfig.json"
   }
 }

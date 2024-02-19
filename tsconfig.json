@@ -20,10 +20,11 @@
     "strict": true,
     "module": "es6",
     "target": "es2019",
-    "sourceMap": true,
+    "sourceMap": false,
     "allowJs": true,
     "moduleResolution": "node",
     "skipLibCheck": true,
+    "declaration": true
   },
   "include": [
     "src",
