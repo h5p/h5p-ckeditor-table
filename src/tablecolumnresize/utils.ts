@@ -121,8 +121,8 @@ export function getTableWidthInPixels( modelTable: Element, editor: Editor ): nu
 export function getTableWidthInEms(modelTable: Element, editor: Editor): number {
     // It is possible for a table to not have a <tbody> element - see #11878.
     const referenceElement = getChildrenViewElement(modelTable, 'tbody', editor) || getChildrenViewElement(modelTable, 'thead', editor);
-    const domReferenceElement = editor.editing.view.domConverter.mapViewToDom(referenceElement);
-    return getElementWidthInEms(domReferenceElement);
+    const domReferenceElement = editor.editing.view.domConverter.mapViewToDom( referenceElement! )!;
+    return getElementWidthInEms( domReferenceElement );
 }
 
 /**
@@ -184,8 +184,8 @@ export function getElementWidthInEms(domElement: HTMLElement): number {
 
     return width / parseFloat(
         getComputedStyle(
-            document.querySelector('html')
-        )['font-size']
+            document.querySelector('html')!
+        ).fontSize
     );
 }
 

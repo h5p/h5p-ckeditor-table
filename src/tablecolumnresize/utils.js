@@ -147,7 +147,7 @@ export function getElementWidthInEms(domElement) {
             parseFloat(styles.borderLeftWidth) -
             parseFloat(styles.borderRightWidth);
     }
-    return width / parseFloat(getComputedStyle(document.querySelector('html'))['font-size']);
+    return width / parseFloat(getComputedStyle(document.querySelector('html')).fontSize);
 }
 /**
  * Returns the column indexes on the left and right edges of a cell. They differ if the cell spans

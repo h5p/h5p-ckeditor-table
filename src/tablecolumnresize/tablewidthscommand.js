@@ -36,7 +36,7 @@ export default class TableWidthsCommand extends Command {
             const childTables = [];
             for (const tableSlot of tableWalker) {
                 childTables.push(...Array.from(tableSlot.cell.getChildren())
-                    .filter(child => child.name === 'table'));
+                    .filter(child => child.getAttribute('name') === 'table'));
             }
             if (tableWidth) {
                 writer.setAttribute('tableWidth', tableWidth, table);

@@ -41,6 +41,7 @@
     "@ckeditor/ckeditor5-undo": "39.0.2",
     "@ckeditor/ckeditor5-utils": "39.0.2",
     "@ckeditor/ckeditor5-widget": "39.0.2",
+    "@types/lodash-es": "^4.17.12",
     "json-diff": "^0.5.4",
     "typescript": "^4.8.4",
     "webpack": "^5.58.1",

@@ -12,6 +12,7 @@ This package is based on the official CKEditor 5 Table package, with a few H5P s
 * [License](#license)
 
 ## Local development of the plugin
+> ⚠️ Remember to make changes to the .ts files and then compile them into .js and .d.ts files with `npm run build`
 
 H5P uses this fork of the official CKEditor5 table plugin in the `h5p-editor-php-library` and `h5p-ckeditor` repositories. Due to the way CKEditor5 builds packages, it is not possible to use `npm link` for local development of this plugin in those repositories.Instead, either copy the changes files into the `(ckeditor5/)node_modules` folder for quick testing, or for more substantial or final changes:
 1. Commit changes to a branch
