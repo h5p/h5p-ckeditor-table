@@ -58,6 +58,7 @@
     "build",
     "ckeditor5-metadata.json"
   ],
+  "types": "src/index.d.ts",
   "scripts": {
     "dll:build": "webpack",
     "build": "tsc -p ./tsconfig.json"
