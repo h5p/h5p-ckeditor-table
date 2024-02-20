@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/utils/ui/table-properties
  */
-import { type ColorOption, type LabeledFieldView, type ListDropdownItemDefinition, type NormalizedColorOption, type ToolbarView, type View, type ColorPickerConfig } from 'ckeditor5/src/ui';
-import { Collection, type LocaleTranslate } from 'ckeditor5/src/utils';
-import type TableCellPropertiesView from '../../tablecellproperties/ui/tablecellpropertiesview';
-import type TablePropertiesView from '../../tableproperties/ui/tablepropertiesview';
-import ColorInputView from '../../ui/colorinputview';
+import { type ColorOption, type LabeledFieldView, type ListDropdownItemDefinition, type NormalizedColorOption, type ToolbarView, type View, type ColorPickerConfig } from 'ckeditor5/src/ui.js';
+import { Collection, type LocaleTranslate } from 'ckeditor5/src/utils.js';
+import type TableCellPropertiesView from '../../tablecellproperties/ui/tablecellpropertiesview.js';
+import type TablePropertiesView from '../../tableproperties/ui/tablepropertiesview.js';
+import ColorInputView from '../../ui/colorinputview.js';
 /**
  * Returns an object containing pairs of CSS border style values and their localized UI
  * labels. Used by {@link module:table/tablecellproperties/ui/tablecellpropertiesview~TableCellPropertiesView}

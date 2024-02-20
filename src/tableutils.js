@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableutils
  */
-import { CKEditorError } from 'ckeditor5/src/utils';
-import { Plugin } from 'ckeditor5/src/core';
-import TableWalker from './tablewalker';
-import { createEmptyTableCell, updateNumericAttribute } from './utils/common';
-import { removeEmptyColumns, removeEmptyRows } from './utils/structure';
-import { getTableColumnElements } from './tablecolumnresize/utils';
+import { CKEditorError } from 'ckeditor5/src/utils.js';
+import { Plugin } from 'ckeditor5/src/core.js';
+import TableWalker from './tablewalker.js';
+import { createEmptyTableCell, updateNumericAttribute } from './utils/common.js';
+import { removeEmptyColumns, removeEmptyRows } from './utils/structure.js';
+import { getTableColumnElements } from './tablecolumnresize/utils.js';
 /**
  * The table utilities plugin.
  */

@@ -1,8 +1,8 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
-import { normalizeColumnWidths, updateColumnElements, getColumnGroupElement, getTableColumnElements, translateColSpanAttribute } from './utils';
+import { normalizeColumnWidths, updateColumnElements, getColumnGroupElement, getTableColumnElements, translateColSpanAttribute } from './utils.js';
 /**
  * Returns a upcast helper that ensures the number of `<tableColumn>` elements corresponds to the actual number of columns in the table,
  * because the input data might have too few or too many <col> elements.

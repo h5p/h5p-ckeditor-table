@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/commands/selectcolumncommand
  */
-import { Command } from 'ckeditor5/src/core';
-import TableWalker from '../tablewalker';
+import { Command } from 'ckeditor5/src/core.js';
+import TableWalker from '../tablewalker.js';
 /**
  * The select column command.
  *

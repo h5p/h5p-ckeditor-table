@@ -1,21 +1,21 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecolumnresize/tablecolumnresizeediting
  */
 import { throttle, isEqual } from 'lodash-es';
-import { global, DomEmitterMixin } from 'ckeditor5/src/utils';
-import { Plugin } from 'ckeditor5/src/core';
-import MouseEventsObserver from '../../src/tablemouse/mouseeventsobserver';
-import TableEditing from '../tableediting';
-import TableUtils from '../tableutils';
-import TableWalker from '../tablewalker';
-import TableWidthsCommand from './tablewidthscommand';
-import { downcastTableResizedClass, upcastColgroupElement } from './converters';
-import { clamp, createFilledArray, sumArray, getColumnEdgesIndexes, getChangedResizedTables, getColumnMinWidthAsPercentage, getElementWidthInPixels, getTableWidthInPixels, normalizeColumnWidths, toPrecision, getDomCellOuterWidth, updateColumnElements, getColumnGroupElement, getTableColumnElements, getTableColumnsWidths } from './utils';
-import { COLUMN_MIN_WIDTH_IN_PIXELS } from './constants';
+import { global, DomEmitterMixin } from 'ckeditor5/src/utils.js';
+import { Plugin } from 'ckeditor5/src/core.js';
+import MouseEventsObserver from '../../src/tablemouse/mouseeventsobserver.js';
+import TableEditing from '../tableediting.js';
+import TableUtils from '../tableutils.js';
+import TableWalker from '../tablewalker.js';
+import TableWidthsCommand from './tablewidthscommand.js';
+import { downcastTableResizedClass, upcastColgroupElement } from './converters.js';
+import { clamp, createFilledArray, sumArray, getColumnEdgesIndexes, getChangedResizedTables, getColumnMinWidthAsPercentage, getElementWidthInPixels, getTableWidthInPixels, normalizeColumnWidths, toPrecision, getDomCellOuterWidth, updateColumnElements, getColumnGroupElement, getTableColumnElements, getTableColumnsWidths } from './utils.js';
+import { COLUMN_MIN_WIDTH_IN_PIXELS } from './constants.js';
 /**
  * The table column resize editing plugin.
  */

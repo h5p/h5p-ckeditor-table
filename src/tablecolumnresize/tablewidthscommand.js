@@ -1,11 +1,10 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
-import { Command } from 'ckeditor5/src/core';
-import { getTableWidthInEms, normalizeColumnWidths } from './utils';
-import TableWalker from './../tablewalker';
-
+import { Command } from 'ckeditor5/src/core.js';
+import { getTableWidthInEms, normalizeColumnWidths } from './utils.js';
+import TableWalker from './../tablewalker.js';
 /**
  * Command used by the {@link module:table/tablecolumnresize~TableColumnResize Table column resize feature} that
  * updates the width of the whole table as well as its individual columns.
@@ -32,27 +31,26 @@ export default class TableWidthsCommand extends Command {
                 columnWidths.split(',');
         }
         model.change(writer => {
+            var _a;
             const tableWalker = new TableWalker(table, { includeAllSlots: true });
             const childTables = [];
             for (const tableSlot of tableWalker) {
                 childTables.push(...Array.from(tableSlot.cell.getChildren())
-                .filter(child => child.name === 'table'));
+                    .filter(child => child.getAttribute('name') === 'table'));
             }
-
             if (tableWidth) {
+                writer.setAttribute('tableWidth', tableWidth, table);
                 // Prevent overflow for nested tables
-                if (table.findAncestor('table')?.getAttribute('tableWidth')) {
+                if ((_a = table.findAncestor('table')) === null || _a === void 0 ? void 0 : _a.getAttribute('tableWidth')) {
                     writer.setAttribute('maxWidth', '100%', table);
                 }
                 for (const child of childTables) {
                     writer.setAttribute('maxWidth', '100%', child);
                 }
-
                 writer.setAttribute('tableWidth', getTableWidthInEms(table, this.editor) + 'em', table);
             }
             else {
                 writer.removeAttribute('tableWidth', table);
-
                 for (const child of childTables) {
                     writer.removeAttribute('maxWidth', child);
                 }

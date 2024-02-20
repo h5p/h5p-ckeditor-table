@@ -1,19 +1,19 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableproperties/tablepropertiesui
  */
-import { Plugin } from 'ckeditor5/src/core';
-import { ButtonView, ContextualBalloon, clickOutsideHandler, getLocalizedColorOptions, normalizeColorOptions } from 'ckeditor5/src/ui';
+import { Plugin } from 'ckeditor5/src/core.js';
+import { ButtonView, ContextualBalloon, clickOutsideHandler, getLocalizedColorOptions, normalizeColorOptions } from 'ckeditor5/src/ui.js';
 import { debounce } from 'lodash-es';
-import TablePropertiesView from './ui/tablepropertiesview';
+import TablePropertiesView from './ui/tablepropertiesview.js';
 import tableProperties from './../../theme/icons/table-properties.svg';
-import { colorFieldValidator, getLocalizedColorErrorText, getLocalizedLengthErrorText, lengthFieldValidator, lineWidthFieldValidator, defaultColors } from '../utils/ui/table-properties';
-import { getTableWidgetAncestor } from '../utils/ui/widget';
-import { getBalloonTablePositionData, repositionContextualBalloon } from '../utils/ui/contextualballoon';
-import { getNormalizedDefaultProperties } from '../utils/table-properties';
+import { colorFieldValidator, getLocalizedColorErrorText, getLocalizedLengthErrorText, lengthFieldValidator, lineWidthFieldValidator, defaultColors } from '../utils/ui/table-properties.js';
+import { getSelectionAffectedTableWidget } from '../utils/ui/widget.js';
+import { getBalloonTablePositionData, repositionContextualBalloon } from '../utils/ui/contextualballoon.js';
+import { getNormalizedDefaultProperties } from '../utils/table-properties.js';
 const ERROR_TEXT_TIMEOUT = 500;
 // Map of view properties and related commands.
 const propertyToCommandMap = {
@@ -251,7 +251,7 @@ export default class TablePropertiesUI extends Plugin {
     _updateView() {
         const editor = this.editor;
         const viewDocument = editor.editing.view.document;
-        if (!getTableWidgetAncestor(viewDocument.selection)) {
+        if (!getSelectionAffectedTableWidget(viewDocument.selection)) {
             this._hideView();
         }
         else if (this._isViewVisible) {

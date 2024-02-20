@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableselection
  */
-import { Plugin } from 'ckeditor5/src/core';
-import type { Element, DocumentFragment } from 'ckeditor5/src/engine';
-import TableUtils from './tableutils';
+import { Plugin } from 'ckeditor5/src/core.js';
+import type { Element, DocumentFragment } from 'ckeditor5/src/engine.js';
+import TableUtils from './tableutils.js';
 import '../theme/tableselection.css';
 /**
  * This plugin enables the advanced table cells, rows and columns selection.

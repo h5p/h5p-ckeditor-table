@@ -1,14 +1,14 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/utils/ui/table-properties
  */
-import { ButtonView, Model } from 'ckeditor5/src/ui';
-import { Collection } from 'ckeditor5/src/utils';
-import { isColor, isLength, isPercentage } from 'ckeditor5/src/engine';
-import ColorInputView from '../../ui/colorinputview';
+import { ButtonView, ViewModel } from 'ckeditor5/src/ui.js';
+import { Collection } from 'ckeditor5/src/utils.js';
+import { isColor, isLength, isPercentage } from 'ckeditor5/src/engine.js';
+import ColorInputView from '../../ui/colorinputview.js';
 const isEmpty = (val) => val === '';
 /**
  * Returns an object containing pairs of CSS border style values and their localized UI
@@ -91,7 +91,7 @@ export function getBorderStyleDefinitions(view, defaultStyle) {
     for (const style in styleLabels) {
         const definition = {
             type: 'button',
-            model: new Model({
+            model: new ViewModel({
                 _borderStyleValue: style,
                 label: styleLabels[style],
                 role: 'menuitemradio',

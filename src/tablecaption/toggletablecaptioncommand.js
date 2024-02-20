@@ -1,12 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
 * @module table/tablecaption/toggletablecaptioncommand
 */
-import { Command } from 'ckeditor5/src/core';
-import { getCaptionFromTableModelElement, getSelectionAffectedTable } from './utils';
+import { Command } from 'ckeditor5/src/core.js';
+import { getCaptionFromTableModelElement } from './utils.js';
+import { getSelectionAffectedTable } from '../utils/common.js';
 /**
  * The toggle table caption command.
  *

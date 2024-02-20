@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/ui/colorinputview
  */
-import { View, InputTextView, FocusCycler, ViewCollection, type ColorDefinition, type DropdownView, type ColorPickerConfig } from 'ckeditor5/src/ui';
-import { FocusTracker, KeystrokeHandler, type Locale } from 'ckeditor5/src/utils';
+import { View, InputTextView, FocusCycler, ViewCollection, type ColorDefinition, type DropdownView, type ColorPickerConfig, type FocusableView } from 'ckeditor5/src/ui.js';
+import { FocusTracker, KeystrokeHandler, type Locale } from 'ckeditor5/src/utils.js';
 import '../../theme/colorinput.css';
 export type ColorInputViewOptions = {
     colorDefinitions: Array<ColorDefinition>;
@@ -20,7 +20,7 @@ export type ColorInputViewOptions = {
  *
  * @internal
  */
-export default class ColorInputView extends View {
+export default class ColorInputView extends View implements FocusableView {
     /**
      * The value of the input.
      *
@@ -63,9 +63,13 @@ export default class ColorInputView extends View {
      */
     readonly focusTracker: FocusTracker;
     /**
+     * Helps cycling over focusable children in the input view.
+     */
+    readonly focusCycler: FocusCycler;
+    /**
      * A collection of views that can be focused in the view.
      */
-    protected readonly _focusables: ViewCollection;
+    protected readonly _focusables: ViewCollection<FocusableView>;
     /**
      * An instance of the dropdown allowing to select a color from a grid.
      */
@@ -85,10 +89,6 @@ export default class ColorInputView extends View {
      */
     protected _stillTyping: boolean;
     /**
-     * Helps cycling over focusable items in the view.
-     */
-    protected readonly _focusCycler: FocusCycler;
-    /**
      * Creates an instance of the color input view.
      *
      * @param locale The locale instance.
@@ -104,9 +104,9 @@ export default class ColorInputView extends View {
      */
     render(): void;
     /**
-     * Focuses the input.
+     * Focuses the view.
      */
-    focus(): void;
+    focus(direction: 1 | -1): void;
     /**
      * @inheritDoc
      */

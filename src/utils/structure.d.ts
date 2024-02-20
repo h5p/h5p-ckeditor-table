@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/utils/structure
  */
-import type { Element, Writer } from 'ckeditor5/src/engine';
-import { type TableSlot } from '../tablewalker';
-import type TableUtils from '../tableutils';
+import type { Element, Writer } from 'ckeditor5/src/engine.js';
+import { type TableSlot } from '../tablewalker.js';
+import type TableUtils from '../tableutils.js';
 /**
  * Returns a cropped table according to given dimensions.
 

@@ -1,14 +1,14 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecellproperties/ui/tablecellpropertiesview
  */
-import { ButtonView, FocusCycler, LabeledFieldView, View, ViewCollection, type FocusableView, type NormalizedColorOption, type ColorPickerConfig } from 'ckeditor5/src/ui';
-import { KeystrokeHandler, FocusTracker, type Locale } from 'ckeditor5/src/utils';
-import type ColorInputView from '../../ui/colorinputview';
-import type { TableCellPropertiesOptions } from '../../tableconfig';
+import { ButtonView, FocusCycler, LabeledFieldView, ToolbarView, View, ViewCollection, type FocusableView, type NormalizedColorOption, type ColorPickerConfig } from 'ckeditor5/src/ui.js';
+import { KeystrokeHandler, FocusTracker, type Locale } from 'ckeditor5/src/utils.js';
+import type ColorInputView from '../../ui/colorinputview.js';
+import type { TableCellPropertiesOptions } from '../../tableconfig.js';
 import '../../../theme/form.css';
 import '../../../theme/tableform.css';
 import '../../../theme/tablecellproperties.css';
@@ -133,11 +133,11 @@ export default class TableCellPropertiesView extends View {
     /**
      * A toolbar with buttons that allow changing the horizontal text alignment in a table cell.
      */
-    readonly horizontalAlignmentToolbar: View<HTMLElement>;
+    readonly horizontalAlignmentToolbar: ToolbarView;
     /**
      * A toolbar with buttons that allow changing the vertical text alignment in a table cell.
      */
-    readonly verticalAlignmentToolbar: View<HTMLElement>;
+    readonly verticalAlignmentToolbar: ToolbarView;
     /**
      * The "Save" button view.
      */
@@ -149,7 +149,7 @@ export default class TableCellPropertiesView extends View {
     /**
      * A collection of views that can be focused in the form.
      */
-    protected readonly _focusables: ViewCollection;
+    protected readonly _focusables: ViewCollection<FocusableView>;
     /**
      * Helps cycling over {@link #_focusables} in the form.
      */

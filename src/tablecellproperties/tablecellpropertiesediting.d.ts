@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecellproperties/tablecellpropertiesediting
  */
-import { Plugin } from 'ckeditor5/src/core';
-import TableEditing from './../tableediting';
-import TableCellWidthEditing from '../tablecellwidth/tablecellwidthediting';
+import { Plugin } from 'ckeditor5/src/core.js';
+import TableEditing from './../tableediting.js';
+import TableCellWidthEditing from '../tablecellwidth/tablecellwidthediting.js';
 /**
  * The table cell properties editing feature.
  *

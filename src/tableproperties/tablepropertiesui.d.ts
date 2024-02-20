@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tableproperties/tablepropertiesui
  */
-import { type Editor, Plugin } from 'ckeditor5/src/core';
-import { ContextualBalloon } from 'ckeditor5/src/ui';
-import TablePropertiesView from './ui/tablepropertiesview';
+import { type Editor, Plugin } from 'ckeditor5/src/core.js';
+import { ContextualBalloon } from 'ckeditor5/src/ui.js';
+import TablePropertiesView from './ui/tablepropertiesview.js';
 /**
  * The table properties UI plugin. It introduces the `'tableProperties'` button
  * that opens a form allowing to specify visual styling of an entire table.

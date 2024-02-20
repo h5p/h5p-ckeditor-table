@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2023, CKSource Holding sp. z o.o. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 /**
  * @module table/tablecolumnresize/utils
  */
-import type { Editor } from 'ckeditor5/src/core';
-import type { Element, Model, Writer } from 'ckeditor5/src/engine';
-import type TableUtils from '../tableutils';
+import type { Editor } from 'ckeditor5/src/core.js';
+import type { Element, Model, Writer } from 'ckeditor5/src/engine.js';
+import type TableUtils from '../tableutils.js';
 /**
  * Returns all the inserted or changed table model elements in a given change set. Only the tables
  * with 'columnsWidth' attribute are taken into account. The returned set may be empty.
@@ -41,7 +41,7 @@ export declare function getTableWidthInPixels(modelTable: Element, editor: Edito
  * @param editor The editor instance.
  * @returns The width of the table in ems.
  */
-export function getTableWidthInEms(modelTable: Element, editor: Editor): number;
+export declare function getTableWidthInEms(modelTable: Element, editor: Editor): number;
 /**
  * Returns the computed width (in pixels) of the DOM element without padding and borders.
  *
@@ -55,7 +55,7 @@ export declare function getElementWidthInPixels(domElement: HTMLElement): number
  * @param domElement A DOM element.
  * @returns The width of the DOM element in ems.
  */
-export function getElementWidthInEms(domElement: HTMLElement): number;
+export declare function getElementWidthInEms(domElement: HTMLElement): number;
 /**
  * Returns the column indexes on the left and right edges of a cell. They differ if the cell spans
  * across multiple columns.
