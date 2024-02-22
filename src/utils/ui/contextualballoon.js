@@ -17,6 +17,8 @@ const BALLOON_POSITIONS = [
     DEFAULT_BALLOON_POSITIONS.southArrowNorth,
     DEFAULT_BALLOON_POSITIONS.southArrowNorthWest,
     DEFAULT_BALLOON_POSITIONS.southArrowNorthEast,
+    DEFAULT_BALLOON_POSITIONS.westArrowEast,
+    DEFAULT_BALLOON_POSITIONS.eastArrowWest,
     DEFAULT_BALLOON_POSITIONS.viewportStickyNorth
 ];
 /**

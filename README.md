@@ -16,11 +16,20 @@ This package is based on the official CKEditor 5 Table package, with a few H5P s
 
 > ⚠️ Remember to make changes to the .ts files and then compile them into .js and .d.ts files with `npm run build`
 
-H5P uses this fork of the official CKEditor5 table plugin in the `h5p-editor-php-library` and `h5p-ckeditor` repositories. Due to the way CKEditor5 builds packages, it is not possible to use `npm link` for local development of this plugin in those repositories.Instead, either copy the changes files into the `(ckeditor5/)node_modules` folder for quick testing, or for more substantial or final changes:
+H5P uses this fork of the official CKEditor5 table plugin in the `h5p-editor-php-library` and `h5p-ckeditor` repositories. Due to the way CKEditor5 builds packages, it is not possible to use `npm link` for local development of this plugin in those repositories. Instead, you can use one of two methods:
+
+### Quick debugging of small changes
+
+When you're making small changes or debugging and don't want to commit every console.log(), you can copy the changes made in the .ts files from this folder into the temporary files in the `(ckeditor5/)node_modules` folder.
+
+### For bigger/final changes, existing branches and code reviews
+
+When you want to test bigger changes, build-related changes or are finalizing/reviewing a pr, use this more robust method instead. If you're reviewing or testing out an existing branch, skip step 1.
 
 1. Commit changes to a branch
-2. Change the dependency in `(ckeditor5/)package.json` to `"@h5p/ckeditor5-table": "github:h5p/h5p-ckeditor-table#<branch-name>"` in the ckeditor5 folder in h5p-editor or the main folder in h5p-ckeditor.
+2. Change the dependency in `(ckeditor5/)package.json` to `"@h5p/ckeditor5-table": "github:h5p/h5p-ckeditor-table#<branch-name>"`
 3. Run `npm update @h5p/ckeditor5-table && npm run build` from that folder
+4. (H5P.CKEditor (e.g. for FreeTextQuestion) might have to be packed and uploaded instead of updated through a symlink for some setups)
 
 ## Updating the plugin to new official CKE version
 
