@@ -17,6 +17,15 @@ import { getSelectionAffectedTable } from '../common.js';
 
 const DEFAULT_BALLOON_POSITIONS = BalloonPanelView.defaultPositions;
 
+const middleNoArrow = (targetRect: Rect, balloonRect: Rect) => ({
+    top: targetRect.top + targetRect.height / 2 - balloonRect.height / 2,
+	left: targetRect.left + targetRect.width / 2 - balloonRect.width / 2,
+	name: 'arrowless',
+	config: {
+		withArrow: false
+	}
+});
+
 const BALLOON_POSITIONS = [
 	DEFAULT_BALLOON_POSITIONS.northArrowSouth,
 	DEFAULT_BALLOON_POSITIONS.northArrowSouthWest,
@@ -26,7 +35,8 @@ const BALLOON_POSITIONS = [
 	DEFAULT_BALLOON_POSITIONS.southArrowNorthEast,
 	DEFAULT_BALLOON_POSITIONS.westArrowEast,
     DEFAULT_BALLOON_POSITIONS.eastArrowWest,
-	DEFAULT_BALLOON_POSITIONS.viewportStickyNorth
+	DEFAULT_BALLOON_POSITIONS.viewportStickyNorth,
+	middleNoArrow
 ];
 
 /**
