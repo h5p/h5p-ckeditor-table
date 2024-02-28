@@ -13,11 +13,22 @@ const DEFAULT_BALLOON_POSITIONS = BalloonPanelView.defaultPositions;
 const middleNoArrow = (targetRect, balloonRect) => ({
     top: targetRect.top + targetRect.height / 2 - balloonRect.height / 2,
     left: targetRect.left + targetRect.width / 2 - balloonRect.width / 2,
-    name: 'arrowless',
+    name: 'middle_arrowless',
     config: {
         withArrow: false
     }
 });
+const viewportCentreNoArrow = (targetRect, balloonRect, viewportRect, limiterRect) => {
+    const boundaryRect = limiterRect || viewportRect;
+    return {
+        top: boundaryRect.top + boundaryRect.height / 2 - balloonRect.height / 2,
+        left: boundaryRect.left + boundaryRect.width / 2 - balloonRect.width / 2,
+        name: 'viewport_centre',
+        config: {
+            withArrow: false
+        }
+    };
+};
 const BALLOON_POSITIONS = [
     DEFAULT_BALLOON_POSITIONS.northArrowSouth,
     DEFAULT_BALLOON_POSITIONS.northArrowSouthWest,
@@ -28,7 +39,8 @@ const BALLOON_POSITIONS = [
     DEFAULT_BALLOON_POSITIONS.westArrowEast,
     DEFAULT_BALLOON_POSITIONS.eastArrowWest,
     DEFAULT_BALLOON_POSITIONS.viewportStickyNorth,
-    middleNoArrow
+    middleNoArrow,
+    viewportCentreNoArrow
 ];
 /**
  * A helper utility that positions the
@@ -67,7 +79,8 @@ export function getBalloonTablePositionData(editor) {
     const viewTable = editor.editing.mapper.toViewElement(modelTable);
     return {
         target: editor.editing.view.domConverter.mapViewToDom(viewTable),
-        positions: BALLOON_POSITIONS
+        positions: BALLOON_POSITIONS,
+        limiter: document.body
     };
 }
 /**
@@ -84,14 +97,16 @@ export function getBalloonCellPositionData(editor) {
     if (selection.rangeCount > 1) {
         return {
             target: () => createBoundingRect(selection.getRanges(), editor),
-            positions: BALLOON_POSITIONS
+            positions: BALLOON_POSITIONS,
+            limiter: document.body
         };
     }
     const modelTableCell = getTableCellAtPosition(selection.getFirstPosition());
     const viewTableCell = mapper.toViewElement(modelTableCell);
     return {
         target: domConverter.mapViewToDom(viewTableCell),
-        positions: BALLOON_POSITIONS
+        positions: BALLOON_POSITIONS,
+        limiter: document.body
     };
 }
 /**

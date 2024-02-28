@@ -7,7 +7,7 @@
  * @module table/utils/ui/contextualballoon
  */
 
-import { Rect, type PositionOptions } from 'ckeditor5/src/utils.js';
+import { Rect, type PositionOptions, type PositioningFunction } from 'ckeditor5/src/utils.js';
 import { BalloonPanelView, type ContextualBalloon } from 'ckeditor5/src/ui.js';
 import type { Editor } from 'ckeditor5/src/core.js';
 import type { Element, Position, Range } from 'ckeditor5/src/engine.js';
@@ -17,14 +17,27 @@ import { getSelectionAffectedTable } from '../common.js';
 
 const DEFAULT_BALLOON_POSITIONS = BalloonPanelView.defaultPositions;
 
-const middleNoArrow = (targetRect: Rect, balloonRect: Rect) => ({
+const middleNoArrow: PositioningFunction = (targetRect: Rect, balloonRect: Rect) => ({
     top: targetRect.top + targetRect.height / 2 - balloonRect.height / 2,
 	left: targetRect.left + targetRect.width / 2 - balloonRect.width / 2,
-	name: 'arrowless',
+	name: 'middle_arrowless',
 	config: {
 		withArrow: false
 	}
 });
+
+const viewportCentreNoArrow: PositioningFunction = (targetRect: Rect, balloonRect: Rect, viewportRect: Rect, limiterRect?: Rect) => {
+    const boundaryRect = limiterRect || viewportRect;
+
+    return {
+        top: boundaryRect.top + boundaryRect.height / 2 - balloonRect.height / 2,
+        left: boundaryRect.left + boundaryRect.width / 2 - balloonRect.width / 2,
+        name: 'viewport_centre',
+        config: {
+            withArrow: false
+        }
+    };
+};
 
 const BALLOON_POSITIONS = [
 	DEFAULT_BALLOON_POSITIONS.northArrowSouth,
@@ -36,7 +49,8 @@ const BALLOON_POSITIONS = [
 	DEFAULT_BALLOON_POSITIONS.westArrowEast,
     DEFAULT_BALLOON_POSITIONS.eastArrowWest,
 	DEFAULT_BALLOON_POSITIONS.viewportStickyNorth,
-	middleNoArrow
+	middleNoArrow,
+	viewportCentreNoArrow
 ];
 
 /**
@@ -80,7 +94,8 @@ export function getBalloonTablePositionData( editor: Editor ): Partial<PositionO
 
 	return {
 		target: editor.editing.view.domConverter.mapViewToDom( viewTable )!,
-		positions: BALLOON_POSITIONS
+		positions: BALLOON_POSITIONS,
+		limiter: document.body
 	};
 }
 
@@ -99,7 +114,8 @@ export function getBalloonCellPositionData( editor: Editor ): Partial<PositionOp
 	if ( selection.rangeCount > 1 ) {
 		return {
 			target: () => createBoundingRect( selection.getRanges(), editor ),
-			positions: BALLOON_POSITIONS
+			positions: BALLOON_POSITIONS,
+			limiter: document.body
 		};
 	}
 
@@ -108,7 +124,8 @@ export function getBalloonCellPositionData( editor: Editor ): Partial<PositionOp
 
 	return {
 		target: domConverter.mapViewToDom( viewTableCell ),
-		positions: BALLOON_POSITIONS
+		positions: BALLOON_POSITIONS,
+		limiter: document.body
 	};
 }
 
