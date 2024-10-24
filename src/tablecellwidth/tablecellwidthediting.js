@@ -8,7 +8,7 @@
 import { Plugin } from 'ckeditor5/src/core.js';
 import TableEditing from './../tableediting.js';
 import TableCellWidthCommand from './commands/tablecellwidthcommand.js';
-import { getNormalizedDefaultProperties } from '../utils/table-properties.js';
+import { getNormalizedDefaultCellProperties } from '../utils/table-properties.js';
 import { enableProperty } from '../utils/common.js';
 /**
  * The table cell width editing feature.
@@ -34,7 +34,7 @@ export default class TableCellWidthEditing extends Plugin {
      */
     init() {
         const editor = this.editor;
-        const defaultTableCellProperties = getNormalizedDefaultProperties(editor.config.get('table.tableCellProperties.defaultProperties'));
+        const defaultTableCellProperties = getNormalizedDefaultCellProperties(editor.config.get('table.tableCellProperties.defaultProperties'));
         enableProperty(editor.model.schema, editor.conversion, {
             modelAttribute: 'tableCellWidth',
             styleName: 'width',

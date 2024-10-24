@@ -165,6 +165,10 @@ msgctxt "The label for the border style dropdown when no style is applied to a t
 msgid "None"
 msgstr ""
 
+msgctxt "The label for the border style dropdown when the underline border is applied to a table or a table cell."
+msgid "Table underline"
+msgstr ""
+
 msgctxt "The label for the border style dropdown when the solid border is applied to a table or a table cell."
 msgid "Solid"
 msgstr ""
@@ -249,14 +253,30 @@ msgctxt "The label used by assistive technologies describing a button that opens
 msgid "Color picker"
 msgstr ""
 
-msgctxt "The button label for the table toolbar hiding caption attached to the table."
-msgid "Toggle caption off"
-msgstr ""
-
-msgctxt "The button label for the table toolbar showing caption attached to the table."
-msgid "Toggle caption on"
-msgstr ""
-
 msgctxt "The placeholder text for the table caption displayed when the caption is empty."
 msgid "Enter table caption"
+msgstr ""
+
+msgctxt "Accessibility help dialog header text displayed before the list of keystrokes that can be used in a table cell."
+msgid "Keystrokes that can be used in a table cell"
+msgstr ""
+
+msgctxt "Keystroke description for assistive technologies: keystroke for moving the selection to the next cell."
+msgid "Move the selection to the next cell"
+msgstr ""
+
+msgctxt "Keystroke description for assistive technologies: keystroke for moving the selection to the previous cell."
+msgid "Move the selection to the previous cell"
+msgstr ""
+
+msgctxt "Keystroke description for assistive technologies: keystroke for inserting a new table row."
+msgid "Insert a new table row (when in the last cell of a table)"
+msgstr ""
+
+msgctxt "Keystroke description for assistive technologies: keystroke for navigating through the table."
+msgid "Navigate through the table"
+msgstr ""
+
+msgctxt "The accessible label of the menu bar button that displays a user interface to insert a table into editor content."
+msgid "Table"
 msgstr ""

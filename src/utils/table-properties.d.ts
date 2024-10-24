@@ -50,18 +50,48 @@ export interface NormalizedDefaultProperties {
     horizontalAlignment?: string;
 }
 /**
+ * Options used to determine which properties should be added to the normalized configuration.
+ */
+export type NormalizeTableDefaultPropertiesOptions = {
+    /**
+     * Whether the "alignment" property should be added.
+     */
+    includeAlignmentProperty?: boolean;
+    /**
+     * Whether the "padding" property should be added.
+     */
+    includePaddingProperty?: boolean;
+    /**
+     * Whether the "verticalAlignment" property should be added.
+     */
+    includeVerticalAlignmentProperty?: boolean;
+    /**
+     * Whether the "horizontalAlignment" property should be added.
+     */
+    includeHorizontalAlignmentProperty?: boolean;
+    /**
+     * Whether the content is right-to-left.
+     */
+    isRightToLeftContent?: boolean;
+};
+/**
  * Returns the normalized configuration.
  *
- * @param options.includeAlignmentProperty Whether the "alignment" property should be added.
- * @param options.includePaddingProperty Whether the "padding" property should be added.
- * @param options.includeVerticalAlignmentProperty Whether the "verticalAlignment" property should be added.
- * @param options.includeHorizontalAlignmentProperty Whether the "horizontalAlignment" property should be added.
- * @param options.isRightToLeftContent Whether the content is right-to-left.
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
  */
-export declare function getNormalizedDefaultProperties(config: Partial<NormalizedDefaultProperties> | undefined, options?: {
-    includeAlignmentProperty?: boolean;
-    includePaddingProperty?: boolean;
-    includeVerticalAlignmentProperty?: boolean;
-    includeHorizontalAlignmentProperty?: boolean;
-    isRightToLeftContent?: boolean;
-}): NormalizedDefaultProperties;
+export declare function getNormalizedDefaultProperties(config: Partial<NormalizedDefaultProperties> | undefined, options?: NormalizeTableDefaultPropertiesOptions): NormalizedDefaultProperties;
+/**
+ * Returns the normalized default table properties.
+ *
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
+ */
+export declare function getNormalizedDefaultTableProperties(config: Partial<NormalizedDefaultProperties> | undefined, options?: NormalizeTableDefaultPropertiesOptions): NormalizedDefaultProperties;
+/**
+ * Returns the normalized default cell properties.
+ *
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
+ */
+export declare function getNormalizedDefaultCellProperties(config: Partial<NormalizedDefaultProperties> | undefined, options?: NormalizeTableDefaultPropertiesOptions): NormalizedDefaultProperties;

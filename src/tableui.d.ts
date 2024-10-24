@@ -10,6 +10,7 @@ import { Plugin } from 'ckeditor5/src/core.js';
  * The table UI plugin. It introduces:
  *
  * * The `'insertTable'` dropdown,
+ * * The `'menuBar:insertTable'` menu bar menu,
  * * The `'tableColumn'` dropdown,
  * * The `'tableRow'` dropdown,
  * * The `'mergeTableCells'` split button.

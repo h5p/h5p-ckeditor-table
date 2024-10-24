@@ -104,6 +104,15 @@ export default class InsertTableView extends View {
         this.keystrokes.listenTo(this.element);
     }
     /**
+     * Resets the rows and columns selection.
+     */
+    reset() {
+        this.set({
+            rows: 1,
+            columns: 1
+        });
+    }
+    /**
      * @inheritDoc
      */
     focus() {
