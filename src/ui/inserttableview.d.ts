@@ -50,6 +50,10 @@ export default class InsertTableView extends View {
     constructor(locale: Locale);
     render(): void;
     /**
+     * Resets the rows and columns selection.
+     */
+    reset(): void;
+    /**
      * @inheritDoc
      */
     focus(): void;

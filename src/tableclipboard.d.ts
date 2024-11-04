@@ -2,6 +2,7 @@
  * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
+import { ClipboardPipeline, ClipboardMarkersUtils } from 'ckeditor5/src/clipboard.js';
 import { Plugin } from 'ckeditor5/src/core.js';
 import type { DocumentFragment, Element, Item, Model, Position, Writer } from 'ckeditor5/src/engine.js';
 import TableSelection from './tableselection.js';
@@ -19,7 +20,11 @@ export default class TableClipboard extends Plugin {
     /**
      * @inheritDoc
      */
-    static get requires(): readonly [typeof TableSelection, typeof TableUtils];
+    static get isOfficialPlugin(): true;
+    /**
+     * @inheritDoc
+     */
+    static get requires(): readonly [typeof ClipboardMarkersUtils, typeof ClipboardPipeline, typeof TableSelection, typeof TableUtils];
     /**
      * @inheritDoc
      */
@@ -44,6 +49,10 @@ export default class TableClipboard extends Plugin {
      * If not provided the current model document selection will be used.
      */
     private _onInsertContent;
+    /**
+     * Inserts provided `selectedTableCells` into `pastedTable`.
+     */
+    private _replaceSelectedCells;
     /**
      * Replaces the part of selectedTable with pastedTable.
      */

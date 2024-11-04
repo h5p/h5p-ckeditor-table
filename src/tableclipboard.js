@@ -2,6 +2,7 @@
  * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
+import { ClipboardPipeline, ClipboardMarkersUtils } from 'ckeditor5/src/clipboard.js';
 import { Plugin } from 'ckeditor5/src/core.js';
 import TableSelection from './tableselection.js';
 import TableWalker from './tablewalker.js';
@@ -21,8 +22,14 @@ export default class TableClipboard extends Plugin {
     /**
      * @inheritDoc
      */
+    static get isOfficialPlugin() {
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     static get requires() {
-        return [TableSelection, TableUtils];
+        return [ClipboardMarkersUtils, ClipboardPipeline, TableSelection, TableUtils];
     }
     /**
      * @inheritDoc
@@ -42,7 +49,9 @@ export default class TableClipboard extends Plugin {
      * @param data Clipboard event data.
      */
     _onCopyCut(evt, data) {
+        const view = this.editor.editing.view;
         const tableSelection = this.editor.plugins.get(TableSelection);
+        const clipboardMarkersUtils = this.editor.plugins.get(ClipboardMarkersUtils);
         if (!tableSelection.getSelectedTableCells()) {
             return;
         }
@@ -51,13 +60,13 @@ export default class TableClipboard extends Plugin {
         }
         data.preventDefault();
         evt.stop();
-        const dataController = this.editor.data;
-        const viewDocument = this.editor.editing.view.document;
-        const content = dataController.toView(tableSelection.getSelectionAsFragment());
-        viewDocument.fire('clipboardOutput', {
-            dataTransfer: data.dataTransfer,
-            content,
-            method: evt.name
+        this.editor.model.enqueueChange({ isUndoable: evt.name === 'cut' }, () => {
+            const documentFragment = clipboardMarkersUtils._copySelectedFragmentWithMarkers(evt.name, this.editor.model.document.selection, () => tableSelection.getSelectionAsFragment());
+            view.document.fire('clipboardOutput', {
+                dataTransfer: data.dataTransfer,
+                content: this.editor.data.toView(documentFragment),
+                method: evt.name
+            });
         });
     }
     /**
@@ -78,8 +87,9 @@ export default class TableClipboard extends Plugin {
         }
         const model = this.editor.model;
         const tableUtils = this.editor.plugins.get(TableUtils);
+        const clipboardMarkersUtils = this.editor.plugins.get(ClipboardMarkersUtils);
         // We might need to crop table before inserting so reference might change.
-        let pastedTable = this.getTableIfOnlyTableInContent(content, model);
+        const pastedTable = this.getTableIfOnlyTableInContent(content, model);
         if (!pastedTable) {
             return;
         }
@@ -90,44 +100,57 @@ export default class TableClipboard extends Plugin {
         }
         // Override default model.insertContent() handling at this point.
         evt.stop();
-        model.change(writer => {
-            const pastedDimensions = {
-                width: tableUtils.getColumns(pastedTable),
-                height: tableUtils.getRows(pastedTable)
-            };
-            // Prepare the table for pasting.
-            const selection = prepareTableForPasting(selectedTableCells, pastedDimensions, writer, tableUtils);
-            // Beyond this point we operate on a fixed content table with rectangular selection and proper last row/column values.
-            const selectionHeight = selection.lastRow - selection.firstRow + 1;
-            const selectionWidth = selection.lastColumn - selection.firstColumn + 1;
-            // Crop pasted table if:
-            // - Pasted table dimensions exceeds selection area.
-            // - Pasted table has broken layout (ie some cells sticks out by the table dimensions established by the first and last row).
-            //
-            // Note: The table dimensions are established by the width of the first row and the total number of rows.
-            // It is possible to programmatically create a table that has rows which would have cells anchored beyond first row width but
-            // such table will not be created by other editing solutions.
-            const cropDimensions = {
-                startRow: 0,
-                startColumn: 0,
-                endRow: Math.min(selectionHeight, pastedDimensions.height) - 1,
-                endColumn: Math.min(selectionWidth, pastedDimensions.width) - 1
-            };
-            pastedTable = cropTableToDimensions(pastedTable, cropDimensions, writer);
-            // Content table to which we insert a pasted table.
-            const selectedTable = selectedTableCells[0].findAncestor('table');
-            const cellsToSelect = this._replaceSelectedCellsWithPasted(pastedTable, pastedDimensions, selectedTable, selection, writer);
-            if (this.editor.plugins.get('TableSelection').isEnabled) {
-                // Selection ranges must be sorted because the first and last selection ranges are considered
-                // as anchor/focus cell ranges for multi-cell selection.
-                const selectionRanges = tableUtils.sortRanges(cellsToSelect.map(cell => writer.createRangeOn(cell)));
-                writer.setSelection(selectionRanges);
-            }
-            else {
-                // Set selection inside first cell if multi-cell selection is disabled.
-                writer.setSelection(cellsToSelect[0], 0);
-            }
-        });
+        if (content.is('documentFragment')) {
+            clipboardMarkersUtils._pasteMarkersIntoTransformedElement(content.markers, writer => this._replaceSelectedCells(pastedTable, selectedTableCells, writer));
+        }
+        else {
+            this.editor.model.change(writer => {
+                this._replaceSelectedCells(pastedTable, selectedTableCells, writer);
+            });
+        }
+    }
+    /**
+     * Inserts provided `selectedTableCells` into `pastedTable`.
+     */
+    _replaceSelectedCells(pastedTable, selectedTableCells, writer) {
+        const tableUtils = this.editor.plugins.get(TableUtils);
+        const pastedDimensions = {
+            width: tableUtils.getColumns(pastedTable),
+            height: tableUtils.getRows(pastedTable)
+        };
+        // Prepare the table for pasting.
+        const selection = prepareTableForPasting(selectedTableCells, pastedDimensions, writer, tableUtils);
+        // Beyond this point we operate on a fixed content table with rectangular selection and proper last row/column values.
+        const selectionHeight = selection.lastRow - selection.firstRow + 1;
+        const selectionWidth = selection.lastColumn - selection.firstColumn + 1;
+        // Crop pasted table if:
+        // - Pasted table dimensions exceeds selection area.
+        // - Pasted table has broken layout (ie some cells sticks out by the table dimensions established by the first and last row).
+        //
+        // Note: The table dimensions are established by the width of the first row and the total number of rows.
+        // It is possible to programmatically create a table that has rows which would have cells anchored beyond first row width but
+        // such table will not be created by other editing solutions.
+        const cropDimensions = {
+            startRow: 0,
+            startColumn: 0,
+            endRow: Math.min(selectionHeight, pastedDimensions.height) - 1,
+            endColumn: Math.min(selectionWidth, pastedDimensions.width) - 1
+        };
+        pastedTable = cropTableToDimensions(pastedTable, cropDimensions, writer);
+        // Content table to which we insert a pasted table.
+        const selectedTable = selectedTableCells[0].findAncestor('table');
+        const cellsToSelect = this._replaceSelectedCellsWithPasted(pastedTable, pastedDimensions, selectedTable, selection, writer);
+        if (this.editor.plugins.get('TableSelection').isEnabled) {
+            // Selection ranges must be sorted because the first and last selection ranges are considered
+            // as anchor/focus cell ranges for multi-cell selection.
+            const selectionRanges = tableUtils.sortRanges(cellsToSelect.map(cell => writer.createRangeOn(cell)));
+            writer.setSelection(selectionRanges);
+        }
+        else {
+            // Set selection inside first cell if multi-cell selection is disabled.
+            writer.setSelection(cellsToSelect[0], 0);
+        }
+        return selectedTable;
     }
     /**
      * Replaces the part of selectedTable with pastedTable.

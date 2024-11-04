@@ -24,6 +24,12 @@ export default class TableKeyboard extends Plugin {
     /**
      * @inheritDoc
      */
+    static get isOfficialPlugin() {
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     static get requires() {
         return [TableSelection, TableUtils];
     }
@@ -31,11 +37,36 @@ export default class TableKeyboard extends Plugin {
      * @inheritDoc
      */
     init() {
-        const view = this.editor.editing.view;
+        const editor = this.editor;
+        const view = editor.editing.view;
         const viewDocument = view.document;
+        const t = editor.t;
         this.listenTo(viewDocument, 'arrowKey', (...args) => this._onArrowKey(...args), { context: 'table' });
         this.listenTo(viewDocument, 'tab', (...args) => this._handleTabOnSelectedTable(...args), { context: 'figure' });
         this.listenTo(viewDocument, 'tab', (...args) => this._handleTab(...args), { context: ['th', 'td'] });
+        // Add the information about the keystrokes to the accessibility database.
+        editor.accessibility.addKeystrokeInfoGroup({
+            id: 'table',
+            label: t('Keystrokes that can be used in a table cell'),
+            keystrokes: [
+                {
+                    label: t('Move the selection to the next cell'),
+                    keystroke: 'Tab'
+                },
+                {
+                    label: t('Move the selection to the previous cell'),
+                    keystroke: 'Shift+Tab'
+                },
+                {
+                    label: t('Insert a new table row (when in the last cell of a table)'),
+                    keystroke: 'Tab'
+                },
+                {
+                    label: t('Navigate through the table'),
+                    keystroke: [['arrowup'], ['arrowright'], ['arrowdown'], ['arrowleft']]
+                }
+            ]
+        });
     }
     /**
      * Handles {@link module:engine/view/document~Document#event:tab tab} events for the <kbd>Tab</kbd> key executed

@@ -20,6 +20,7 @@ import Bold from '@ckeditor/ckeditor5-basic-styles/src/bold.js';
 import LinkEditing from '@ckeditor/ckeditor5-link/src/linkediting.js';
 import HighlightEditing from '@ckeditor/ckeditor5-highlight/src/highlightediting.js';
 import GeneralHtmlSupport from '@ckeditor/ckeditor5-html-support/src/generalhtmlsupport.js';
+import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
 
 import { focusEditor } from '@ckeditor/ckeditor5-widget/tests/widgetresize/_utils/utils.js';
 import { modelTable } from '../_utils/utils.js';
@@ -79,6 +80,14 @@ describe( 'TableColumnResizeEditing', () => {
 
 	it( 'should have a proper name', () => {
 		expect( TableColumnResizeEditing.pluginName ).to.equal( 'TableColumnResizeEditing' );
+	} );
+
+	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
+		expect( TableColumnResizeEditing.isOfficialPlugin ).to.be.true;
+	} );
+
+	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
+		expect( TableColumnResizeEditing.isPremiumPlugin ).to.be.false;
 	} );
 
 	it( 'should have defined column widths in model', () => {
@@ -2689,7 +2698,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					editor = await createEditor(
 						{ table: { contentToolbar: [ 'toggleTableCaption' ] } },
-						[ LinkEditing, HighlightEditing, Bold, TableToolbar, TableCaption ]
+						[ LinkEditing, HighlightEditing, Bold, TableToolbar, TableCaption, ClipboardPipeline ]
 					);
 					model = editor.model;
 				} );
@@ -2895,7 +2904,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			beforeEach( async () => {
 				ghsEditor = await createEditor( {
-					plugins: [ Table, TableColumnResize, Paragraph, WidgetResize, GeneralHtmlSupport ],
+					plugins: [ Table, TableColumnResize, Paragraph, WidgetResize, GeneralHtmlSupport, ClipboardPipeline ],
 					htmlSupport: {
 						allow: [
 							{
@@ -2955,7 +2964,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			beforeEach( async () => {
 				ptoEditor = await createEditor( {
-					plugins: [ Table, TableColumnResize, Paragraph, PlainTableOutput ]
+					plugins: [ Table, TableColumnResize, Paragraph, PlainTableOutput, ClipboardPipeline ]
 				} );
 			} );
 
@@ -3069,7 +3078,7 @@ describe( 'TableColumnResizeEditing', () => {
 						bar: document.createElement( 'div' )
 					}, {
 						plugins: [
-							Paragraph, Table, TableColumnResize, Paragraph, WidgetResize
+							Paragraph, Table, TableColumnResize, Paragraph, WidgetResize, ClipboardPipeline
 						]
 					} );
 				tableColumnPlugin = multiRoot.plugins.get( 'TableColumnResizeEditing' );
@@ -3089,7 +3098,7 @@ describe( 'TableColumnResizeEditing', () => {
 	} );
 
 	async function createEditor( configCustomization, additionalPlugins ) {
-		const plugins = [ Table, TableColumnResize, TableColumnResizeEditing, Paragraph, WidgetResize, Undo ];
+		const plugins = [ Table, TableColumnResize, TableColumnResizeEditing, Paragraph, WidgetResize, Undo, ClipboardPipeline ];
 
 		if ( additionalPlugins ) {
 			plugins.push( ...additionalPlugins );

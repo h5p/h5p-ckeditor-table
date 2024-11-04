@@ -62,12 +62,20 @@ describe( 'TableCaptionEditing', () => {
 			} );
 	} );
 
-	afterEach( () => {
-		editor.destroy();
+	afterEach( async () => {
+		await editor.destroy();
 	} );
 
 	it( 'should have pluginName', () => {
 		expect( TableCaptionEditing.pluginName ).to.equal( 'TableCaptionEditing' );
+	} );
+
+	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
+		expect( TableCaptionEditing.isOfficialPlugin ).to.be.true;
+	} );
+
+	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
+		expect( TableCaptionEditing.isPremiumPlugin ).to.be.false;
 	} );
 
 	it( 'should set proper schema rules', () => {
@@ -301,14 +309,15 @@ describe( 'TableCaptionEditing', () => {
 						'<table>' +
 							'<tbody>' +
 								'<tr>' +
-									'<td class="ck-editor__editable ck-editor__nested-editable" contenteditable="true" role="textbox">' +
+									'<td class="ck-editor__editable ck-editor__nested-editable" contenteditable="true" role="textbox"' +
+										' tabindex="-1">' +
 										'<span class="ck-table-bogus-paragraph">xyz</span>' +
 									'</td>' +
 								'</tr>' +
 							'</tbody>' +
 						'</table>' +
 						'<figcaption class="ck-editor__editable ck-editor__nested-editable" ' +
-								'contenteditable="true" data-placeholder="Enter table caption" role="textbox">' +
+								'contenteditable="true" data-placeholder="Enter table caption" role="textbox" tabindex="-1">' +
 							'Foo caption' +
 						'</figcaption>' +
 					'</figure>'

@@ -5,6 +5,7 @@
 
 import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
 import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
 
 import TableSelection from '../src/tableselection.js';
 import TableUtils from '../src/tableutils.js';
@@ -16,7 +17,7 @@ describe( 'table clipboard', () => {
 
 	beforeEach( async () => {
 		editor = await VirtualTestEditor.create( {
-			plugins: [ TableClipboard, Paragraph ]
+			plugins: [ TableClipboard, Paragraph, ClipboardPipeline ]
 		} );
 	} );
 
@@ -25,6 +26,14 @@ describe( 'table clipboard', () => {
 	} );
 
 	describe( 'TableClipboard', () => {
+		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
+			expect( TableClipboard.isOfficialPlugin ).to.be.true;
+		} );
+
+		it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
+			expect( TableClipboard.isPremiumPlugin ).to.be.false;
+		} );
+
 		it( 'should be a named plugin', () => {
 			expect( editor.plugins.get( 'TableClipboard' ) ).to.be.instanceOf( TableClipboard );
 		} );

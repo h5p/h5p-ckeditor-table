@@ -6,7 +6,7 @@
  * @module table/tableui
  */
 import { icons, Plugin } from 'ckeditor5/src/core.js';
-import { addListToDropdown, createDropdown, ViewModel, SplitButtonView, SwitchButtonView } from 'ckeditor5/src/ui.js';
+import { addListToDropdown, createDropdown, ViewModel, SplitButtonView, SwitchButtonView, MenuBarMenuView } from 'ckeditor5/src/ui.js';
 import { Collection } from 'ckeditor5/src/utils.js';
 import InsertTableView from './ui/inserttableview.js';
 import tableColumnIcon from './../theme/icons/table-column.svg';
@@ -16,6 +16,7 @@ import tableMergeCellIcon from './../theme/icons/table-merge-cell.svg';
  * The table UI plugin. It introduces:
  *
  * * The `'insertTable'` dropdown,
+ * * The `'menuBar:insertTable'` menu bar menu,
  * * The `'tableColumn'` dropdown,
  * * The `'tableRow'` dropdown,
  * * The `'mergeTableCells'` split button.
@@ -28,6 +29,12 @@ export default class TableUI extends Plugin {
      */
     static get pluginName() {
         return 'TableUI';
+    }
+    /**
+     * @inheritDoc
+     */
+    static get isOfficialPlugin() {
+        return true;
     }
     /**
      * @inheritDoc
@@ -62,6 +69,28 @@ export default class TableUI extends Plugin {
                 });
             });
             return dropdownView;
+        });
+        editor.ui.componentFactory.add('menuBar:insertTable', locale => {
+            const command = editor.commands.get('insertTable');
+            const menuView = new MenuBarMenuView(locale);
+            const insertTableView = new InsertTableView(locale);
+            insertTableView.delegate('execute').to(menuView);
+            menuView.on('change:isOpen', (event, name, isOpen) => {
+                if (!isOpen) {
+                    insertTableView.reset();
+                }
+            });
+            insertTableView.on('execute', () => {
+                editor.execute('insertTable', { rows: insertTableView.rows, columns: insertTableView.columns });
+                editor.editing.view.focus();
+            });
+            menuView.buttonView.set({
+                label: t('Table'),
+                icon: icons.table
+            });
+            menuView.panelView.children.add(insertTableView);
+            menuView.bind('isEnabled').to(command);
+            return menuView;
         });
         editor.ui.componentFactory.add('tableColumn', locale => {
             const options = [

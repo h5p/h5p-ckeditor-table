@@ -46,6 +46,13 @@ export default class TableSelection extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
+	public static override get isOfficialPlugin(): true {
+		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	public static get requires() {
 		return [ TableUtils, TableUtils ] as const;
 	}
@@ -141,7 +148,6 @@ export default class TableSelection extends Plugin {
 			};
 
 			const table = cropTableToDimensions( sourceTable, cropDimensions, writer );
-
 			writer.insert( table, documentFragment, 0 );
 
 			return documentFragment;

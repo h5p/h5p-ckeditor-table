@@ -15,6 +15,7 @@ import Batch from '@ckeditor/ckeditor5-engine/src/model/batch.js';
 import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
 import ButtonView from '@ckeditor/ckeditor5-ui/src/button/buttonview.js';
 import ContextualBalloon from '@ckeditor/ckeditor5-ui/src/panel/balloon/contextualballoon.js';
+import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
 
 import Table from '../../src/table.js';
 import TablePropertiesEditing from '../../src/tableproperties/tablepropertiesediting.js';
@@ -37,7 +38,7 @@ describe( 'table properties', () => {
 
 			return ClassicTestEditor
 				.create( editorElement, {
-					plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo ],
+					plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo, ClipboardPipeline ],
 					initialData: '<table><tr><td>foo</td></tr></table><p>bar</p>'
 				} )
 				.then( newEditor => {
@@ -63,6 +64,14 @@ describe( 'table properties', () => {
 
 		it( 'should be named', () => {
 			expect( TablePropertiesUI.pluginName ).to.equal( 'TablePropertiesUI' );
+		} );
+
+		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
+			expect( TablePropertiesUI.isOfficialPlugin ).to.be.true;
+		} );
+
+		it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
+			expect( TablePropertiesUI.isPremiumPlugin ).to.be.false;
 		} );
 
 		it( 'should load ContextualBalloon', () => {
@@ -668,9 +677,9 @@ describe( 'table properties', () => {
 
 					expect( contextualBalloon.visibleView ).to.equal( tablePropertiesView );
 					expect( tablePropertiesView ).to.include( {
-						borderStyle: 'none',
-						borderColor: '',
-						borderWidth: '',
+						borderStyle: 'double',
+						borderColor: 'hsl(0, 0%, 70%)',
+						borderWidth: '1px',
 						backgroundColor: '',
 						width: '',
 						height: '',
@@ -784,7 +793,7 @@ describe( 'table properties', () => {
 
 				return ClassicTestEditor
 					.create( editorElement, {
-						plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo ],
+						plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo, ClipboardPipeline ],
 						initialData: '<table><tr><td>foo</td></tr></table><p>bar</p>',
 						table: {
 							tableProperties: {
@@ -917,7 +926,7 @@ describe( 'table properties', () => {
 
 			return ClassicTestEditor
 				.create( editorElement, {
-					plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo ],
+					plugins: [ Table, TablePropertiesEditing, TablePropertiesUI, Paragraph, Undo, ClipboardPipeline ],
 					initialData: '<table><tr><td>foo</td></tr></table><p>bar</p>',
 					table: {
 						tableProperties: {

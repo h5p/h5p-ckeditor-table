@@ -13,7 +13,7 @@ import tableProperties from './../../theme/icons/table-properties.svg';
 import { colorFieldValidator, getLocalizedColorErrorText, getLocalizedLengthErrorText, lengthFieldValidator, lineWidthFieldValidator, defaultColors } from '../utils/ui/table-properties.js';
 import { getSelectionAffectedTableWidget } from '../utils/ui/widget.js';
 import { getBalloonTablePositionData, repositionContextualBalloon } from '../utils/ui/contextualballoon.js';
-import { getNormalizedDefaultProperties } from '../utils/table-properties.js';
+import { getNormalizedDefaultTableProperties } from '../utils/table-properties.js';
 const ERROR_TEXT_TIMEOUT = 500;
 // Map of view properties and related commands.
 const propertyToCommandMap = {
@@ -47,6 +47,12 @@ export default class TablePropertiesUI extends Plugin {
     /**
      * @inheritDoc
      */
+    static get isOfficialPlugin() {
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     constructor(editor) {
         super(editor);
         /**
@@ -64,7 +70,7 @@ export default class TablePropertiesUI extends Plugin {
     init() {
         const editor = this.editor;
         const t = editor.t;
-        this._defaultTableProperties = getNormalizedDefaultProperties(editor.config.get('table.tableProperties.defaultProperties'), {
+        this._defaultTableProperties = getNormalizedDefaultTableProperties(editor.config.get('table.tableProperties.defaultProperties'), {
             includeAlignmentProperty: true
         });
         this._balloon = editor.plugins.get(ContextualBalloon);

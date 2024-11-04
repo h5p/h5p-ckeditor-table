@@ -13,15 +13,6 @@ import FormRowView from '../../ui/formrowview.js';
 import '../../../theme/form.css';
 import '../../../theme/tableform.css';
 import '../../../theme/tablecellproperties.css';
-const ALIGNMENT_ICONS = {
-    left: icons.alignLeft,
-    center: icons.alignCenter,
-    right: icons.alignRight,
-    justify: icons.alignJustify,
-    top: icons.alignTop,
-    middle: icons.alignMiddle,
-    bottom: icons.alignBottom
-};
 /**
  * The class representing a table cell properties form, allowing users to customize
  * certain style aspects of a table cell, for instance, border, padding, text alignment, etc..
@@ -176,14 +167,7 @@ export default class TableCellPropertiesView extends View {
         });
         // Maintain continuous focus cycling over views that have focusable children and focus cyclers themselves.
         [this.borderColorInput, this.backgroundInput].forEach(view => {
-            view.fieldView.focusCycler.on('forwardCycle', evt => {
-                this._focusCycler.focusNext();
-                evt.stop();
-            });
-            view.fieldView.focusCycler.on('backwardCycle', evt => {
-                this._focusCycler.focusPrevious();
-                evt.stop();
-            });
+            this._focusCycler.chain(view.fieldView.focusCycler);
         });
         [
             this.borderStyleDropdown,
@@ -427,6 +411,15 @@ export default class TableCellPropertiesView extends View {
         const locale = this.locale;
         const t = this.t;
         const alignmentLabel = new LabelView(locale);
+        const ALIGNMENT_ICONS = {
+            left: icons.alignLeft,
+            center: icons.alignCenter,
+            right: icons.alignRight,
+            justify: icons.alignJustify,
+            top: icons.alignTop,
+            middle: icons.alignMiddle,
+            bottom: icons.alignBottom
+        };
         alignmentLabel.text = t('Table cell text alignment');
         // -- Horizontal ---------------------------------------------------
         const horizontalAlignmentToolbar = new ToolbarView(locale);

@@ -7,6 +7,7 @@
 
 import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
 import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
+import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
 import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
 import { setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 import Table from '../src/table.js';
@@ -23,7 +24,7 @@ describe( 'PlainTableOutput', () => {
 		document.body.appendChild( editorElement );
 
 		editor = await ClassicTestEditor.create( editorElement, {
-			plugins: [ Paragraph, Table, TableCaption, TableProperties, PlainTableOutput ]
+			plugins: [ Paragraph, Table, TableCaption, TableProperties, PlainTableOutput, ClipboardPipeline ]
 		} );
 
 		model = editor.model;
@@ -40,6 +41,14 @@ describe( 'PlainTableOutput', () => {
 
 	it( 'should have pluginName', () => {
 		expect( PlainTableOutput.pluginName ).to.equal( 'PlainTableOutput' );
+	} );
+
+	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
+		expect( PlainTableOutput.isOfficialPlugin ).to.be.true;
+	} );
+
+	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
+		expect( PlainTableOutput.isPremiumPlugin ).to.be.false;
 	} );
 
 	describe( 'conversion in data pipeline', () => {
@@ -155,7 +164,7 @@ describe( 'PlainTableOutput', () => {
 
 			it( 'should not create caption element without TableCaption plugin', async () => {
 				const testEditor = await ClassicTestEditor.create( editorElement, {
-					plugins: [ Paragraph, Table, PlainTableOutput ]
+					plugins: [ Paragraph, Table, PlainTableOutput, ClipboardPipeline ]
 				} );
 
 				testEditor.setData(
@@ -175,7 +184,7 @@ describe( 'PlainTableOutput', () => {
 					'</table>'
 				);
 
-				testEditor.destroy();
+				await testEditor.destroy();
 			} );
 
 			it( 'should be overridable', () => {
@@ -347,7 +356,7 @@ describe( 'PlainTableOutput', () => {
 
 				beforeEach( async () => {
 					testEditor = await ClassicTestEditor.create( editorElement, {
-						plugins: [ Paragraph, Table, PlainTableOutput ]
+						plugins: [ Paragraph, Table, PlainTableOutput, ClipboardPipeline ]
 					} );
 
 					model = testEditor.model;
@@ -431,7 +440,7 @@ describe( 'PlainTableOutput', () => {
 
 			it( 'should not convert image captions', async () => {
 				const testEditor = await ClassicTestEditor.create( editorElement, {
-					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput ],
+					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput, ClipboardPipeline ],
 					image: { toolbar: [ '|' ] }
 				} );
 
@@ -449,13 +458,13 @@ describe( 'PlainTableOutput', () => {
 					'</figure>'
 				);
 
-				testEditor.destroy();
+				await testEditor.destroy();
 			} );
 
 			// See: https://github.com/ckeditor/ckeditor5/issues/11394
 			it( 'should allow overriding image caption converters', async () => {
 				const testEditor = await ClassicTestEditor.create( editorElement, {
-					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput ],
+					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput, ClipboardPipeline ],
 					image: { toolbar: [ '|' ] }
 				} );
 
@@ -481,7 +490,7 @@ describe( 'PlainTableOutput', () => {
 					'</figure>'
 				);
 
-				testEditor.destroy();
+				await testEditor.destroy();
 			} );
 
 			function createEmptyTable() {

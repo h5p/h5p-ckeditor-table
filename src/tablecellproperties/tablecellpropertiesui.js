@@ -13,7 +13,7 @@ import { debounce } from 'lodash-es';
 import { getTableWidgetAncestor } from '../utils/ui/widget.js';
 import { getBalloonCellPositionData, repositionContextualBalloon } from '../utils/ui/contextualballoon.js';
 import tableCellProperties from './../../theme/icons/table-cell-properties.svg';
-import { getNormalizedDefaultProperties } from '../utils/table-properties.js';
+import { getNormalizedDefaultCellProperties } from '../utils/table-properties.js';
 const ERROR_TEXT_TIMEOUT = 500;
 // Map of view properties and related commands.
 const propertyToCommandMap = {
@@ -49,6 +49,12 @@ export default class TableCellPropertiesUI extends Plugin {
     /**
      * @inheritDoc
      */
+    static get isOfficialPlugin() {
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     constructor(editor) {
         super(editor);
         editor.config.define('table.tableCellProperties', {
@@ -62,7 +68,7 @@ export default class TableCellPropertiesUI extends Plugin {
     init() {
         const editor = this.editor;
         const t = editor.t;
-        this._defaultTableCellProperties = getNormalizedDefaultProperties(editor.config.get('table.tableCellProperties.defaultProperties'), {
+        this._defaultTableCellProperties = getNormalizedDefaultCellProperties(editor.config.get('table.tableCellProperties.defaultProperties'), {
             includeVerticalAlignmentProperty: true,
             includeHorizontalAlignmentProperty: true,
             includePaddingProperty: true,

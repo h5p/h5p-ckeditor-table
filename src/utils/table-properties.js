@@ -54,11 +54,8 @@ export function addDefaultUnitToNumericValue(value, defaultUnit) {
 /**
  * Returns the normalized configuration.
  *
- * @param options.includeAlignmentProperty Whether the "alignment" property should be added.
- * @param options.includePaddingProperty Whether the "padding" property should be added.
- * @param options.includeVerticalAlignmentProperty Whether the "verticalAlignment" property should be added.
- * @param options.includeHorizontalAlignmentProperty Whether the "horizontalAlignment" property should be added.
- * @param options.isRightToLeftContent Whether the content is right-to-left.
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
  */
 export function getNormalizedDefaultProperties(config, options = {}) {
     const normalizedConfig = {
@@ -83,4 +80,36 @@ export function getNormalizedDefaultProperties(config, options = {}) {
         normalizedConfig.horizontalAlignment = options.isRightToLeftContent ? 'right' : 'left';
     }
     return normalizedConfig;
+}
+/**
+ * Returns the normalized default table properties.
+ *
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
+ */
+export function getNormalizedDefaultTableProperties(config, options) {
+    return getNormalizedDefaultProperties({
+        // It adds support for border none in the table element, keep it in sync with the content styles
+        // See more: https://github.com/ckeditor/ckeditor5/issues/6841#issuecomment-1959195608
+        borderStyle: 'double',
+        borderColor: 'hsl(0, 0%, 70%)',
+        borderWidth: '1px',
+        ...config
+    }, options);
+}
+/**
+ * Returns the normalized default cell properties.
+ *
+ * @param config The configuration to normalize.
+ * @param options Options used to determine which properties should be added.
+ */
+export function getNormalizedDefaultCellProperties(config, options) {
+    return getNormalizedDefaultProperties({
+        // It adds support for border none in the table element, keep it in sync with the content styles
+        // See more: https://github.com/ckeditor/ckeditor5/issues/6841#issuecomment-1959195608
+        borderStyle: 'solid',
+        borderColor: 'hsl(0, 0%, 75%)',
+        borderWidth: '1px',
+        ...config
+    }, options);
 }

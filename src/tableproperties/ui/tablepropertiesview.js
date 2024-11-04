@@ -13,11 +13,6 @@ import FormRowView from '../../ui/formrowview.js';
 import '../../../theme/form.css';
 import '../../../theme/tableform.css';
 import '../../../theme/tableproperties.css';
-const ALIGNMENT_ICONS = {
-    left: icons.objectLeft,
-    center: icons.objectCenter,
-    right: icons.objectRight
-};
 /**
  * The class representing a table properties form, allowing users to customize
  * certain style aspects of a table, for instance, border, background color, alignment, etc..
@@ -154,14 +149,7 @@ export default class TablePropertiesView extends View {
         });
         // Maintain continuous focus cycling over views that have focusable children and focus cyclers themselves.
         [this.borderColorInput, this.backgroundInput].forEach(view => {
-            view.fieldView.focusCycler.on('forwardCycle', evt => {
-                this._focusCycler.focusNext();
-                evt.stop();
-            });
-            view.fieldView.focusCycler.on('backwardCycle', evt => {
-                this._focusCycler.focusPrevious();
-                evt.stop();
-            });
+            this._focusCycler.chain(view.fieldView.focusCycler);
         });
         [
             this.borderStyleDropdown,
@@ -393,7 +381,11 @@ export default class TablePropertiesView extends View {
         });
         fillToolbar({
             view: this,
-            icons: ALIGNMENT_ICONS,
+            icons: {
+                left: icons.objectLeft,
+                center: icons.objectCenter,
+                right: icons.objectRight
+            },
             toolbar: alignmentToolbar,
             labels: this._alignmentLabels,
             propertyName: 'alignment',
