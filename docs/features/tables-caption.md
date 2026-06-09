@@ -1,6 +1,7 @@
 ---
 menu-title: Table caption
 meta-title: Table caption | CKEditor 5 Documentation
+meta-description: Add captions to tables in CKEditor 5 to provide context or descriptions, enhancing accessibility and content clarity.
 category: tables
 order: 50
 modified_at: 2022-05-19
@@ -8,35 +9,31 @@ modified_at: 2022-05-19
 
 # Table caption
 
-{@snippet features/build-table-source}
+{@snippet features/build-table-source empty}
 
 The {@link module:table/tablecaption~TableCaption} plugin lets you add captions to your tables. Table captions also improve accessibility as they are recognized by screen readers.
 
 ## Demo
 
-In the demo below, click the table caption to edit it. Once you click the caption, you can use the table toolbar button {@icon @ckeditor/ckeditor5-core/theme/icons/caption.svg Table caption} to toggle the caption on and off.
+In the demo below, click the table caption to edit it. Once you click the caption, you can use the table toolbar button {@icon @ckeditor/ckeditor5-icons/theme/icons/caption.svg Table caption} to toggle the caption on and off.
 
 {@snippet features/table-caption}
 
-<info-box info>
+<snippet-footer>
 	This demo presents a limited set of features. Visit the {@link examples/builds/full-featured-editor feature-rich editor example} to see more in action.
-</info-box>
+</snippet-footer>
 
 ## Installation
 
-<info-box info>
-	⚠️ **New import paths**
+After {@link getting-started/integrations-cdn/quick-start installing the editor}, add the feature to your plugin list and toolbar configuration:
 
-	Starting with {@link updating/update-to-42 version 42.0.0}, we changed the format of import paths. This guide uses the new, shorter format. Refer to the {@link getting-started/legacy-getting-started/legacy-imports Packages in the legacy setup} guide if you use an older version of CKEditor&nbsp;5.
-</info-box>
-
-After {@link getting-started/quick-start installing the editor}, add the feature to your plugin list and toolbar configuration:
-
+<code-switcher>
 ```js
 import { ClassicEditor, Table, TableCaption, TableToolbar } from 'ckeditor5';
 
 ClassicEditor
-	.create( document.querySelector( '#editor' ), {
+	.create( {
+		licenseKey: '<YOUR_LICENSE_KEY>', // Or 'GPL'.
 		plugins: [ Table, TableToolbar, TableCaption, /* ... */ ],
 		toolbar: [ 'insertTable', /* ... */ ],
 		table: {
@@ -48,8 +45,21 @@ ClassicEditor
 	.then( /* ... */ )
 	.catch( /* ... */ );
 ```
+</code-switcher>
 
-By default, the table caption is placed above the table. You can change the placement by setting [`caption-side`](https://developer.mozilla.org/en-US/docs/Web/CSS/caption-side) in your {@link getting-started/advanced/content-styles content styles} for the `.ck-content .table > figcaption` style. Changing it to `caption-side: bottom` will display the caption below the table.
+By default, the table caption is placed above the table. You can change the placement by setting [`caption-side`](https://developer.mozilla.org/en-US/docs/Web/CSS/caption-side) in your {@link getting-started/setup/css content styles} for the `.ck-content .table > figcaption` style. Changing it to `caption-side: bottom` will display the caption below the table.
+
+### Alternative HTML configuration
+
+By default, the plugin produces the `<figcaption>` HTML element to store the caption content. However, it is possible to use the `<caption>` element instead. To change it, use the {@link module:table/tableconfig~TableCaptionConfig#useCaptionElement} configuration option:
+
+```js
+table: {
+	tableCaption: {
+		useCaptionElement: true
+		}
+	}
+```
 
 ## Common API
 

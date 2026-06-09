@@ -1,22 +1,21 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
-
-/* globals console, window, document */
 
 import { createTableAsciiArt, modelTable, prepareModelTableInput, prettyFormatModelTableInput } from '../_utils/utils.js';
 
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
-import { setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+import { ClassicEditor } from '@ckeditor/ckeditor5-editor-classic';
+import { _setModelData } from '@ckeditor/ckeditor5-engine';
 
 import { diffString } from 'json-diff';
-import { debounce } from 'lodash-es';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
-import TableWalker from '../../src/tablewalker.js';
+import { debounce } from 'es-toolkit/compat';
+import { ArticlePluginSet } from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
+import { TableWalker } from '../../src/tablewalker.js';
 
 ClassicEditor
-	.create( document.querySelector( '#editor' ), {
+	.create( {
+		attachTo: document.querySelector( '#editor' ),
 		image: { toolbar: [ 'toggleImageCaption', 'imageTextAlternative' ] },
 		plugins: [ ArticlePluginSet ],
 		toolbar: [
@@ -47,7 +46,7 @@ ClassicEditor
 			const inputModelData = parseModelData( modelData.value );
 
 			if ( inputModelData ) {
-				const element = setModelData._parse( modelTable( inputModelData ), editor.model.schema );
+				const element = _setModelData._parse( modelTable( inputModelData ), editor.model.schema );
 
 				editor.model.change( writer => {
 					editor.model.insertContent( element, table ? editor.model.createRangeOn( table ) : null );

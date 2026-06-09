@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellproperties/commands/tablecellverticalalignmentcommand
  */
 
-import type { Editor } from 'ckeditor5/src/core.js';
+import type { Editor } from '@ckeditor/ckeditor5-core';
 
-import TableCellPropertyCommand from './tablecellpropertycommand.js';
+import { TableCellPropertyCommand } from './tablecellpropertycommand.js';
 
 /**
  * The table cell vertical alignment command.
@@ -33,7 +33,7 @@ import TableCellPropertyCommand from './tablecellpropertycommand.js';
  *
  * The `'middle'` value is the default one so there is no need to set it.
  */
-export default class TableCellVerticalAlignmentCommand extends TableCellPropertyCommand {
+export class TableCellVerticalAlignmentCommand extends TableCellPropertyCommand {
 	/**
 	 * Creates a new `TableCellVerticalAlignmentCommand` instance.
 	 *

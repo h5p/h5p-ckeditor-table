@@ -1,22 +1,18 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* global document */
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { _clearTranslations, add as addTranslations } from '@ckeditor/ckeditor5-utils';
+import { testUtils } from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
 
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
-import { _clear as clearTranslations, add as addTranslations } from '@ckeditor/ckeditor5-utils/src/translation-service.js';
-import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
-
-import TableEditing from '../src/tableediting.js';
-import TableUI from '../src/tableui.js';
-import InsertTableView from '../src/ui/inserttableview.js';
-import SwitchButtonView from '@ckeditor/ckeditor5-ui/src/button/switchbuttonview.js';
-import DropdownView from '@ckeditor/ckeditor5-ui/src/dropdown/dropdownview.js';
-import ListSeparatorView from '@ckeditor/ckeditor5-ui/src/list/listseparatorview.js';
-import SplitButtonView from '@ckeditor/ckeditor5-ui/src/dropdown/button/splitbuttonview.js';
-import { icons } from '@ckeditor/ckeditor5-core';
+import { TableEditing } from '../src/tableediting.js';
+import { TableUI } from '../src/tableui.js';
+import { InsertTableView } from '../src/ui/inserttableview.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { SwitchButtonView, DropdownView, ListSeparatorView, SplitButtonView } from '@ckeditor/ckeditor5-ui';
+import { IconTable } from '@ckeditor/ckeditor5-icons';
 
 describe( 'TableUI', () => {
 	let editor, element;
@@ -28,8 +24,68 @@ describe( 'TableUI', () => {
 		addTranslations( 'pl', {} );
 	} );
 
+	describe( 'tableRow dropdown (footers enabled)', () => {
+		let dropdown, footerEditor, footerElement;
+
+		beforeEach( () => {
+			footerElement = document.createElement( 'div' );
+			document.body.appendChild( footerElement );
+
+			return ClassicTestEditor
+				.create( footerElement, {
+					plugins: [ TableEditing, TableUI, Paragraph ],
+					table: {
+						enableFooters: true
+					}
+				} )
+				.then( newEditor => {
+					footerEditor = newEditor;
+					dropdown = footerEditor.ui.componentFactory.create( 'tableRow' );
+
+					dropdown.render();
+					document.body.appendChild( dropdown.element );
+				} );
+		} );
+
+		afterEach( () => {
+			dropdown.element.remove();
+			footerElement.remove();
+
+			return footerEditor.destroy();
+		} );
+
+		it( 'should show footer row toggle', () => {
+			dropdown.isOpen = true;
+
+			const labels = dropdown.listView.items.map( item => item instanceof ListSeparatorView ? '|' : item.children.first.label );
+
+			expect( labels ).to.deep.equal( [
+				'Header row',
+				'Footer row',
+				'|',
+				'Insert row above',
+				'Insert row below',
+				'Delete row',
+				'Select row'
+			] );
+		} );
+
+		it( 'should bind footer toggle to footer command', () => {
+			dropdown.isOpen = true;
+
+			const items = dropdown.listView.items;
+			const footerCommand = footerEditor.commands.get( 'setTableFooterRow' );
+
+			footerCommand.isEnabled = true;
+			expect( items.get( 1 ).children.first.isEnabled ).to.be.true;
+
+			footerCommand.isEnabled = false;
+			expect( items.get( 1 ).children.first.isEnabled ).to.be.false;
+		} );
+	} );
+
 	after( () => {
-		clearTranslations();
+		_clearTranslations();
 	} );
 
 	beforeEach( () => {
@@ -38,7 +94,7 @@ describe( 'TableUI', () => {
 
 		return ClassicTestEditor
 			.create( element, {
-				plugins: [ TableEditing, TableUI ]
+				plugins: [ TableEditing, TableUI, Paragraph ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
@@ -78,7 +134,7 @@ describe( 'TableUI', () => {
 		it( 'should register insertTable button', () => {
 			expect( insertTable ).to.be.instanceOf( DropdownView );
 			expect( insertTable.buttonView.label ).to.equal( 'Insert table' );
-			expect( insertTable.buttonView.icon ).to.equal( icons.table );
+			expect( insertTable.buttonView.icon ).to.equal( IconTable );
 		} );
 
 		it( 'should bind to insertTable command', () => {
@@ -160,7 +216,7 @@ describe( 'TableUI', () => {
 
 		it( 'should set properties on a button', () => {
 			expect( menuView.buttonView.label ).to.equal( 'Table' );
-			expect( menuView.buttonView.icon ).to.equal( icons.table );
+			expect( menuView.buttonView.icon ).to.equal( IconTable );
 		} );
 
 		it( 'should bind #isEnabled to the InsertTableCommand', () => {
@@ -254,9 +310,14 @@ describe( 'TableUI', () => {
 
 			const labels = listView.items.map( item => item instanceof ListSeparatorView ? '|' : item.children.first.label );
 
-			expect( labels ).to.deep.equal(
-				[ 'Header row', '|', 'Insert row above', 'Insert row below', 'Delete row', 'Select row' ]
-			);
+			expect( labels ).to.deep.equal( [
+				'Header row',
+				'|',
+				'Insert row above',
+				'Insert row below',
+				'Delete row',
+				'Select row'
+			] );
 		} );
 
 		it( 'should bind items in panel to proper commands', () => {
@@ -313,7 +374,7 @@ describe( 'TableUI', () => {
 
 			const focusSpy = testUtils.sinon.spy( editor.editing.view, 'focus' );
 
-			dropdown.listView.items.get( 2 ).children.last.fire( 'execute' );
+			dropdown.listView.items.get( 3 ).children.last.fire( 'execute' );
 
 			sinon.assert.calledOnce( focusSpy );
 		} );

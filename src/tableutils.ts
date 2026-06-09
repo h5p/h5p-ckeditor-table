@@ -1,39 +1,40 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableutils
  */
 
-import { CKEditorError } from 'ckeditor5/src/utils.js';
-import { Plugin } from 'ckeditor5/src/core.js';
+import { CKEditorError } from '@ckeditor/ckeditor5-utils';
+import { Plugin } from '@ckeditor/ckeditor5-core';
 import type {
-	DocumentSelection,
-	Element,
-	Node,
-	Position,
-	Range,
-	Selection,
-	Writer
-} from 'ckeditor5/src/engine.js';
+	ModelDocumentSelection,
+	ModelElement,
+	ModelNode,
+	ModelPosition,
+	ModelRange,
+	ModelSelection,
+	ModelWriter
+} from '@ckeditor/ckeditor5-engine';
 
-import TableWalker, { type TableWalkerOptions } from './tablewalker.js';
-import { createEmptyTableCell, updateNumericAttribute } from './utils/common.js';
+import { TableWalker, type TableWalkerOptions } from './tablewalker.js';
+import { createEmptyTableCell, updateNumericAttribute, isEntireCellsLineHeader, isTableCellTypeEnabled } from './utils/common.js';
 import { removeEmptyColumns, removeEmptyRows } from './utils/structure.js';
 import { getTableColumnElements } from './tablecolumnresize/utils.js';
+import type { TableCellType } from './tablecellproperties/tablecellpropertiesutils.js';
 
-type Cell = { cell: Element; rowspan: number };
+type Cell = { cell: ModelElement; rowspan: number };
 type CellsToMove = Map<number, Cell>;
 type CellsToTrim = Array<Cell>;
 
-type IndexesObject = { first: number; last: number };
+export type TableIndexesObject = { first: number; last: number };
 
 /**
  * The table utilities plugin.
  */
-export default class TableUtils extends Plugin {
+export class TableUtils extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
@@ -84,11 +85,11 @@ export default class TableUtils extends Plugin {
 	 *
 	 * @returns Returns a `{row, column}` object.
 	 */
-	public getCellLocation( tableCell: Element ): { row: number; column: number } {
+	public getCellLocation( tableCell: ModelElement ): { row: number; column: number } {
 		const tableRow = tableCell.parent!;
-		const table = tableRow.parent as Element;
+		const table = tableRow.parent as ModelElement;
 
-		const rowIndex = table.getChildIndex( tableRow as Node );
+		const rowIndex = table.getChildIndex( tableRow as ModelNode );
 
 		const tableWalker = new TableWalker( table, { row: rowIndex } );
 
@@ -122,17 +123,19 @@ export default class TableUtils extends Plugin {
 	 * @param options.columns The number of columns to create. Default value is 2.
 	 * @param options.headingRows The number of heading rows. Default value is 0.
 	 * @param options.headingColumns The number of heading columns. Default value is 0.
+	 * @param options.footerRows The number of footer rows. Default value is 0.
 	 * @returns The created table element.
 	 */
 	public createTable(
-		writer: Writer,
+		writer: ModelWriter,
 		options: {
 			rows?: number;
 			columns?: number;
 			headingRows?: number;
 			headingColumns?: number;
+			footerRows?: number;
 		}
-	): Element {
+	): ModelElement {
 		const table = writer.createElement( 'table' );
 
 		const rows = options.rows || 2;
@@ -140,12 +143,16 @@ export default class TableUtils extends Plugin {
 
 		createEmptyRows( writer, table, 0, rows, columns );
 
+		if ( options.footerRows ) {
+			this.setFooterRowsCount( writer, table, options.footerRows );
+		}
+
 		if ( options.headingRows ) {
-			updateNumericAttribute( 'headingRows', Math.min( options.headingRows, rows ), table, writer, 0 );
+			this.setHeadingRowsCount( writer, table, options.headingRows );
 		}
 
 		if ( options.headingColumns ) {
-			updateNumericAttribute( 'headingColumns', Math.min( options.headingColumns, columns ), table, writer, 0 );
+			this.setHeadingColumnsCount( writer, table, options.headingColumns );
 		}
 
 		return table;
@@ -179,13 +186,15 @@ export default class TableUtils extends Plugin {
 	 * @param options.copyStructureFromAbove The flag for copying row structure. Note that
 	 * the row structure will not be copied if this option is not provided.
 	 */
-	public insertRows( table: Element, options: { at?: number; rows?: number; copyStructureFromAbove?: boolean } = {} ): void {
+	public insertRows( table: ModelElement, options: { at?: number; rows?: number; copyStructureFromAbove?: boolean } = {} ): void {
 		const model = this.editor.model;
 
 		const insertAt = options.at || 0;
 		const rowsToInsert = options.rows || 1;
 		const isCopyStructure = options.copyStructureFromAbove !== undefined;
 		const copyStructureFrom = options.copyStructureFromAbove ? insertAt - 1 : insertAt;
+		const cellTypeEnabled = isTableCellTypeEnabled( this.editor );
+		const scopedHeaders = !!this.editor.config.get( 'table.tableCellProperties.scopedHeaders' );
 
 		const rows = this.getRows( table );
 		const columns = this.getColumns( table );
@@ -204,65 +213,103 @@ export default class TableUtils extends Plugin {
 		}
 
 		model.change( writer => {
-			const headingRows = table.getAttribute( 'headingRows' ) as number || 0;
+			let headingRows = table.getAttribute( 'headingRows' ) as number || 0;
+			let footerRows = table.getAttribute( 'footerRows' ) as number || 0;
 
 			// Inserting rows inside heading section requires to update `headingRows` attribute as the heading section will grow.
 			if ( headingRows > insertAt ) {
-				updateNumericAttribute( 'headingRows', headingRows + rowsToInsert, table, writer, 0 );
+				headingRows += rowsToInsert;
+			}
+
+			// Inserting rows inside footer section requires to update `footerRows` attribute as the footer section will grow.
+			if ( footerRows && insertAt > rows - footerRows ) {
+				footerRows += rowsToInsert;
 			}
 
 			// Inserting at the end or at the beginning of a table doesn't require to calculate anything special.
 			if ( !isCopyStructure && ( insertAt === 0 || insertAt === rows ) ) {
-				createEmptyRows( writer, table, insertAt, rowsToInsert, columns );
+				const rows = createEmptyRows( writer, table, insertAt, rowsToInsert, columns );
 
-				return;
-			}
+				if ( cellTypeEnabled ) {
+					for ( let rowOffset = 0; rowOffset < rows.length; rowOffset++ ) {
+						const row = rows[ rowOffset ];
 
-			// Iterate over all the rows above the inserted rows in order to check for the row-spanned cells.
-			const walkerEndRow = isCopyStructure ? Math.max( insertAt, copyStructureFrom ) : insertAt;
-			const tableIterator = new TableWalker( table, { endRow: walkerEndRow } );
-
-			// Store spans of the reference row to reproduce it's structure. This array is column number indexed.
-			const rowColSpansMap = new Array( columns ).fill( 1 );
-
-			for ( const { row, column, cellHeight, cellWidth, cell } of tableIterator ) {
-				const lastCellRow = row + cellHeight - 1;
-
-				const isOverlappingInsertedRow = row < insertAt && insertAt <= lastCellRow;
-				const isReferenceRow = row <= copyStructureFrom && copyStructureFrom <= lastCellRow;
-
-				// If the cell is row-spanned and overlaps the inserted row, then reserve space for it in the row map.
-				if ( isOverlappingInsertedRow ) {
-					// This cell overlaps the inserted rows so we need to expand it further.
-					writer.setAttribute( 'rowspan', cellHeight + rowsToInsert, cell );
-
-					// Mark this cell with negative number to indicate how many cells should be skipped when adding the new cells.
-					rowColSpansMap[ column ] = -cellWidth;
-				}
-				// Store the colspan from reference row.
-				else if ( isCopyStructure && isReferenceRow ) {
-					rowColSpansMap[ column ] = cellWidth;
-				}
-			}
-
-			for ( let rowIndex = 0; rowIndex < rowsToInsert; rowIndex++ ) {
-				const tableRow = writer.createElement( 'tableRow' );
-
-				writer.insert( tableRow, table, insertAt );
-
-				for ( let cellIndex = 0; cellIndex < rowColSpansMap.length; cellIndex++ ) {
-					const colspan = rowColSpansMap[ cellIndex ];
-					const insertPosition = writer.createPositionAt( tableRow, 'end' );
-
-					// Insert the empty cell only if this slot is not row-spanned from any other cell.
-					if ( colspan > 0 ) {
-						createEmptyTableCell( writer, insertPosition, colspan > 1 ? { colspan } : undefined );
+						for ( let columnIndex = 0; columnIndex < columns; columnIndex++ ) {
+							updateTableCellType( {
+								table,
+								writer,
+								cell: row[ columnIndex ],
+								row: insertAt + rowOffset,
+								column: columnIndex,
+								scopedHeaders
+							} );
+						}
 					}
+				}
+			} else {
+				// Iterate over all the rows above the inserted rows in order to check for the row-spanned cells.
+				const walkerEndRow = isCopyStructure ? Math.max( insertAt, copyStructureFrom ) : insertAt;
+				const tableIterator = new TableWalker( table, { endRow: walkerEndRow } );
 
-					// Skip the col-spanned slots, there won't be any cells.
-					cellIndex += Math.abs( colspan ) - 1;
+				// Store spans of the reference row to reproduce it's structure. This array is column number indexed.
+				const rowColSpansMap = new Array( columns ).fill( 1 );
+
+				for ( const { row, column, cellHeight, cellWidth, cell } of tableIterator ) {
+					const lastCellRow = row + cellHeight - 1;
+
+					const isOverlappingInsertedRow = row < insertAt && insertAt <= lastCellRow;
+					const isReferenceRow = row <= copyStructureFrom && copyStructureFrom <= lastCellRow;
+
+					// If the cell is row-spanned and overlaps the inserted row, then reserve space for it in the row map.
+					if ( isOverlappingInsertedRow ) {
+						// This cell overlaps the inserted rows so we need to expand it further.
+						writer.setAttribute( 'rowspan', cellHeight + rowsToInsert, cell );
+
+						// Mark this cell with negative number to indicate how many cells should be skipped when adding the new cells.
+						rowColSpansMap[ column ] = -cellWidth;
+					}
+					// Store the colspan from reference row.
+					else if ( isCopyStructure && isReferenceRow ) {
+						rowColSpansMap[ column ] = cellWidth;
+					}
+				}
+
+				for ( let rowIndex = 0; rowIndex < rowsToInsert; rowIndex++ ) {
+					const tableRow = writer.createElement( 'tableRow' );
+
+					writer.insert( tableRow, table, insertAt );
+
+					for ( let cellIndex = 0; cellIndex < rowColSpansMap.length; cellIndex++ ) {
+						const colspan = rowColSpansMap[ cellIndex ];
+						const insertPosition = writer.createPositionAt( tableRow, 'end' );
+
+						// Insert the empty cell only if this slot is not row-spanned from any other cell.
+						if ( colspan > 0 ) {
+							const insertedCell = createEmptyTableCell( writer, insertPosition, colspan > 1 ? { colspan } : undefined );
+
+							if ( cellTypeEnabled ) {
+								updateTableCellType( {
+									table,
+									writer,
+									cell: insertedCell,
+									row: insertAt + rowIndex,
+									column: cellIndex,
+									scopedHeaders
+								} );
+							}
+						}
+
+						// Skip the col-spanned slots, there won't be any cells.
+						cellIndex += Math.abs( colspan ) - 1;
+					}
 				}
 			}
+
+			this.setFooterRowsCount( writer, table, footerRows );
+			this.setHeadingRowsCount( writer, table, headingRows, {
+				// No need to update cell types again, as they were already set during insertion.
+				updateCellType: false
+			} );
 		} );
 	}
 
@@ -293,63 +340,101 @@ export default class TableUtils extends Plugin {
 	 * @param options.at The column index at which the columns will be inserted. Default value is 0.
 	 * @param options.columns The number of columns to insert. Default value is 1.
 	 */
-	public insertColumns( table: Element, options: { at?: number; columns?: number } = {} ): void {
+	public insertColumns( table: ModelElement, options: { at?: number; columns?: number } = {} ): void {
 		const model = this.editor.model;
 
 		const insertAt = options.at || 0;
 		const columnsToInsert = options.columns || 1;
+		const cellTypeEnabled = isTableCellTypeEnabled( this.editor );
+		const scopedHeaders = !!this.editor.config.get( 'table.tableCellProperties.scopedHeaders' );
 
 		model.change( writer => {
-			const headingColumns = table.getAttribute( 'headingColumns' ) as number;
+			let headingColumns = table.getAttribute( 'headingColumns' ) as number;
 
 			// Inserting columns inside heading section requires to update `headingColumns` attribute as the heading section will grow.
 			if ( insertAt < headingColumns ) {
-				writer.setAttribute( 'headingColumns', headingColumns + columnsToInsert, table );
+				headingColumns += columnsToInsert;
 			}
 
 			const tableColumns = this.getColumns( table );
 
 			// Inserting at the end and at the beginning of a table doesn't require to calculate anything special.
 			if ( insertAt === 0 || tableColumns === insertAt ) {
+				let rowIndex = 0;
+
 				for ( const tableRow of table.getChildren() ) {
 					// Ignore non-row elements inside the table (e.g. caption).
 					if ( !tableRow.is( 'element', 'tableRow' ) ) {
 						continue;
 					}
 
-					createCells( columnsToInsert, writer, writer.createPositionAt( tableRow, insertAt ? 'end' : 0 ) );
-				}
+					const insertedCells = createCells( columnsToInsert, writer, writer.createPositionAt( tableRow, insertAt ? 'end' : 0 ) );
 
-				return;
-			}
-
-			const tableWalker = new TableWalker( table, { column: insertAt, includeAllSlots: true } );
-
-			for ( const tableSlot of tableWalker ) {
-				const { row, cell, cellAnchorColumn, cellAnchorRow, cellWidth, cellHeight } = tableSlot;
-
-				// When iterating over column the table walker outputs either:
-				// - cells at given column index (cell "e" from method docs),
-				// - spanned columns (spanned cell from row between cells "g" and "h" - spanned by "e", only if `includeAllSlots: true`),
-				// - or a cell from the same row which spans over this column (cell "a").
-
-				if ( cellAnchorColumn < insertAt ) {
-					// If cell is anchored in previous column, it is a cell that spans over an inserted column (cell "a" & "i").
-					// For such cells expand them by a number of columns inserted.
-					writer.setAttribute( 'colspan', cellWidth + columnsToInsert, cell );
-
-					// This cell will overlap cells in rows below so skip them (because of `includeAllSlots` option) - (cell "a")
-					const lastCellRow = cellAnchorRow + cellHeight - 1;
-
-					for ( let i = row; i <= lastCellRow; i++ ) {
-						tableWalker.skipRow( i );
+					if ( cellTypeEnabled ) {
+						// If we insert column in heading section, set proper cell type.
+						for ( let columnOffset = 0; columnOffset < insertedCells.length; columnOffset++ ) {
+							updateTableCellType( {
+								table,
+								writer,
+								cell: insertedCells[ columnOffset ],
+								row: rowIndex,
+								column: insertAt + columnOffset,
+								scopedHeaders
+							} );
+						}
 					}
-				} else {
-					// It's either cell at this column index or spanned cell by a row-spanned cell from row above.
-					// In table above it's cell "e" and a spanned position from row below (empty cell between cells "g" and "h")
-					createCells( columnsToInsert, writer, tableSlot.getPositionBefore() );
+
+					rowIndex++;
+				}
+			} else {
+				const tableWalker = new TableWalker( table, { column: insertAt, includeAllSlots: true } );
+
+				for ( const tableSlot of tableWalker ) {
+					const { row, cell, cellAnchorColumn, cellAnchorRow, cellWidth, cellHeight } = tableSlot;
+
+					// When iterating over column the table walker outputs either:
+					// - cells at given column index (cell "e" from method docs),
+					// - spanned columns (spanned cell from row between cells "g" and "h" - spanned by "e", only
+					// if `includeAllSlots: true`),
+					// - or a cell from the same row which spans over this column (cell "a").
+
+					if ( cellAnchorColumn < insertAt ) {
+						// If cell is anchored in previous column, it is a cell that spans over an inserted column (cell "a" & "i").
+						// For such cells expand them by a number of columns inserted.
+						writer.setAttribute( 'colspan', cellWidth + columnsToInsert, cell );
+
+						// This cell will overlap cells in rows below so skip them (because of `includeAllSlots` option) - (cell "a")
+						const lastCellRow = cellAnchorRow + cellHeight - 1;
+
+						for ( let i = row; i <= lastCellRow; i++ ) {
+							tableWalker.skipRow( i );
+						}
+					} else {
+						// It's either cell at this column index or spanned cell by a row-spanned cell from row above.
+						// In table above it's cell "e" and a spanned position from row below (empty cell between cells "g" and "h")
+						const insertedCells = createCells( columnsToInsert, writer, tableSlot.getPositionBefore() );
+
+						// If we insert column in heading section, set proper cell type.
+						if ( cellTypeEnabled ) {
+							for ( let columnOffset = 0; columnOffset < insertedCells.length; columnOffset++ ) {
+								updateTableCellType( {
+									table,
+									writer,
+									cell: insertedCells[ columnOffset ],
+									row,
+									column: insertAt + columnOffset,
+									scopedHeaders
+								} );
+							}
+						}
+					}
 				}
 			}
+
+			this.setHeadingColumnsCount( writer, table, headingColumns, {
+				// No need to update cell types again, as they were already set during insertion.
+				updateCellType: false
+			} );
 		} );
 	}
 
@@ -381,7 +466,7 @@ export default class TableUtils extends Plugin {
 	 * @param options.at The row index at which the removing rows will start.
 	 * @param options.rows The number of rows to remove. Default value is 1.
 	 */
-	public removeRows( table: Element, options: { at: number; rows?: number } ): void {
+	public removeRows( table: ModelElement, options: { at: number; rows?: number } ): void {
 		const model = this.editor.model;
 
 		const rowsToRemove = options.rows || 1;
@@ -433,11 +518,28 @@ export default class TableUtils extends Plugin {
 			// 2d. Adjust heading rows if removed rows were in a heading section.
 			updateHeadingRows( table, indexesObject, writer );
 
-			// 2e. Remove empty columns (without anchored cells) if there are any.
+			// 2e. Adjust footer rows if removed rows were in a footer section.
+			updateFooterRows( table, rowCount, indexesObject, writer );
+
+			// 2f. Remove empty columns (without anchored cells) if there are any.
 			if ( !removeEmptyColumns( table, this ) ) {
 				// If there wasn't any empty columns then we still need to check if this wasn't called
 				// because of cleaning empty rows and we only removed one of them.
 				removeEmptyRows( table, this );
+			}
+
+			// 3. If next rows are entirely header, adjust heading rows count.
+			if ( isTableCellTypeEnabled( this.editor ) ) {
+				let headingRows = table.getAttribute( 'headingRows' ) as number || 0;
+				const totalRows = this.getRows( table );
+
+				while ( headingRows < totalRows && isEntireCellsLineHeader( { table, row: headingRows } ) ) {
+					headingRows++;
+				}
+
+				this.setHeadingRowsCount( writer, table, headingRows, {
+					updateCellType: false
+				} );
 			}
 		} );
 	}
@@ -471,7 +573,7 @@ export default class TableUtils extends Plugin {
 	 * @param options.at The row index at which the removing columns will start.
 	 * @param options.columns The number of columns to remove.
 	 */
-	public removeColumns( table: Element, options: { at: number; columns?: number } ): void {
+	public removeColumns( table: ModelElement, options: { at: number; columns?: number } ): void {
 		const model = this.editor.model;
 		const first = options.at;
 		const columnsToRemove = options.columns || 1;
@@ -514,6 +616,20 @@ export default class TableUtils extends Plugin {
 				// If there wasn't any empty rows then we still need to check if this wasn't called
 				// because of cleaning empty columns and we only removed one of them.
 				removeEmptyColumns( table, this );
+			}
+
+			// If next columns are entirely header, adjust heading columns count.
+			if ( isTableCellTypeEnabled( this.editor ) ) {
+				let headingColumns = table.getAttribute( 'headingColumns' ) as number || 0;
+				const totalColumns = this.getColumns( table );
+
+				while ( headingColumns < totalColumns && isEntireCellsLineHeader( { table, column: headingColumns } ) ) {
+					headingColumns++;
+				}
+
+				this.setHeadingColumnsCount( writer, table, headingColumns, {
+					updateCellType: false
+				} );
 			}
 		} );
 	}
@@ -559,10 +675,10 @@ export default class TableUtils extends Plugin {
 	 *  | b | c | d |
 	 *  +---+---+---+
 	 */
-	public splitCellVertically( tableCell: Element, numberOfCells = 2 ): void {
+	public splitCellVertically( tableCell: ModelElement, numberOfCells = 2 ): void {
 		const model = this.editor.model;
 		const tableRow = tableCell.parent!;
-		const table = tableRow.parent as Element;
+		const table = tableRow.parent as ModelElement;
 
 		const rowspan = parseInt( tableCell.getAttribute( 'rowspan' ) as string || '1' );
 		const colspan = parseInt( tableCell.getAttribute( 'colspan' ) as string || '1' );
@@ -692,11 +808,11 @@ export default class TableUtils extends Plugin {
 	 *  |   | h | i |
 	 *  +---+---+---+
 	 */
-	public splitCellHorizontally( tableCell: Element, numberOfCells = 2 ): void {
+	public splitCellHorizontally( tableCell: ModelElement, numberOfCells = 2 ): void {
 		const model = this.editor.model;
 
-		const tableRow = tableCell.parent as Node;
-		const table = tableRow.parent! as Element;
+		const tableRow = tableCell.parent as ModelNode;
+		const table = tableRow.parent! as ModelElement;
 		const splitCellRow = table.getChildIndex( tableRow )!;
 
 		const rowspan = parseInt( tableCell.getAttribute( 'rowspan' ) as string || '1' );
@@ -771,6 +887,7 @@ export default class TableUtils extends Plugin {
 			if ( rowspan < numberOfCells ) {
 				// We already split the cell in check one so here we split to the remaining number of cells only.
 				const cellsToInsert = numberOfCells - rowspan;
+				const rowCountBefore = this.getRows( table );
 
 				// This check is needed since we need to check if there are any cells from previous rows than spans over this cell's row.
 				const tableMap = [ ...new TableWalker( table, { startRow: 0, endRow: splitCellRow } ) ];
@@ -803,6 +920,14 @@ export default class TableUtils extends Plugin {
 				if ( headingRows > splitCellRow ) {
 					updateNumericAttribute( 'headingRows', headingRows + cellsToInsert, table, writer );
 				}
+
+				// Update footer rows if split cell is in footer section.
+				const footerRows = table.getAttribute( 'footerRows' ) as number || 0;
+				const footerIndex = rowCountBefore - footerRows;
+
+				if ( footerIndex <= splitCellRow ) {
+					updateNumericAttribute( 'footerRows', footerRows + cellsToInsert, table, writer );
+				}
 			}
 		} );
 	}
@@ -816,11 +941,11 @@ export default class TableUtils extends Plugin {
 	 *
 	 * @param table The table to analyze.
 	 */
-	public getColumns( table: Element ): number {
+	public getColumns( table: ModelElement ): number {
 		// Analyze first row only as all the rows should have the same width.
 		// Using the first row without checking if it's a tableRow because we expect
 		// that table will have only tableRow model elements at the beginning.
-		const row = table.getChild( 0 ) as Element;
+		const row = table.getChild( 0 ) as ModelElement;
 
 		return [ ...row.getChildren() ]
 			// $marker elements can also be children of a row too (when TrackChanges is on). Don't include them in the count.
@@ -841,7 +966,7 @@ export default class TableUtils extends Plugin {
 	 *
 	 * @param table The table to analyze.
 	 */
-	public getRows( table: Element ): number {
+	public getRows( table: ModelElement ): number {
 		// Rowspan not included due to #6427.
 		return Array.from( table.getChildren() )
 			.reduce( ( rowCount, child ) => child.is( 'element', 'tableRow' ) ? rowCount + 1 : rowCount, 0 );
@@ -859,7 +984,7 @@ export default class TableUtils extends Plugin {
 	 * @param table A table over which the walker iterates.
 	 * @param options An object with configuration.
 	 */
-	public createTableWalker( table: Element, options: TableWalkerOptions = {} ): TableWalker {
+	public createTableWalker( table: ModelElement, options: TableWalkerOptions = {} ): TableWalker {
 		return new TableWalker( table, options );
 	}
 
@@ -870,7 +995,7 @@ export default class TableUtils extends Plugin {
 	 * To obtain the cells selected from the inside, use
 	 * {@link #getTableCellsContainingSelection}.
 	 */
-	public getSelectedTableCells( selection: Selection | DocumentSelection ): Array<Element> {
+	public getSelectedTableCells( selection: ModelSelection | ModelDocumentSelection ): Array<ModelElement> {
 		const cells = [];
 
 		for ( const range of this.sortRanges( selection.getRanges() ) ) {
@@ -885,13 +1010,241 @@ export default class TableUtils extends Plugin {
 	}
 
 	/**
+	 * Sets the number of footer rows for the given `table`.
+	 *
+	 * * If number of footer rows is greater than the number of rows in the table, it will be truncated to the number of rows.
+	 * * If footer rows and heading rows overlap, the number of heading rows will be adjusted
+	 *
+	 * It'll have no effect if {@link module:table/tableconfig~TableConfig#enableFooters `table.enableFooters`} is set to `false`.
+	 *
+	 * @param writer The model writer.
+	 * @param table The table model element.
+	 * @param footerRows The number of footer rows to set.
+	 */
+	public setFooterRowsCount( writer: ModelWriter, table: ModelElement, footerRows: number ): void {
+		if ( !this.editor.config.get( 'table.enableFooters' ) ) {
+			return;
+		}
+
+		const headingRows = table.getAttribute( 'headingRows' ) as number || 0;
+		const totalRows = this.getRows( table );
+
+		const truncatedFooterRows = Math.min( footerRows, totalRows );
+
+		updateNumericAttribute( 'footerRows', truncatedFooterRows, table, writer, 0 );
+
+		// If footer rows and heading rows overlap, adjust heading rows.
+		if ( headingRows + truncatedFooterRows > totalRows ) {
+			const newHeadingRows = totalRows - truncatedFooterRows;
+
+			this.setHeadingRowsCount( writer, table, newHeadingRows );
+		}
+	}
+
+	/**
+	 * Sets the number of heading rows for the given `table`.
+	 *
+	 * If number of heading rows is greater than the number of rows in the table,
+	 * it will be truncated to the number of rows.
+	 *
+	 * @param writer The model writer.
+	 * @param table The table model element.
+	 * @param headingRows The number of heading rows to set.
+	 * @param options Additional options.
+	 * @param options.updateCellType If set to `false` it will only update the `headingRows` attribute
+	 * without updating the cell types in the table. Default is `true`.
+	 * @param options.resetFormerHeadingCells If set to `true`, it will check if the rows that are no longer in the heading section
+	 * should be updated to body cells. Default is `true`.
+	 * @param options.autoExpand If set to `true`, it will check if the following rows look like a header and expand the heading section.
+	 * Default is `true`.
+	 */
+	public setHeadingRowsCount(
+		writer: ModelWriter,
+		table: ModelElement,
+		headingRows: number,
+		options: UpdateTableHeadingsOptions = {}
+	): void {
+		const {
+			updateCellType = true,
+			resetFormerHeadingCells = true,
+			autoExpand = true
+		} = options;
+
+		const totalRows = this.getRows( table );
+		const scopedHeaders = !!this.editor.config.get( 'table.tableCellProperties.scopedHeaders' );
+		const oldHeadingRows = table.getAttribute( 'headingRows' ) as number || 0;
+
+		let truncatedHeadingRows = Math.min( headingRows, totalRows );
+
+		if ( truncatedHeadingRows === oldHeadingRows ) {
+			return;
+		}
+
+		updateNumericAttribute( 'headingRows', truncatedHeadingRows, table, writer, 0 );
+
+		// Check if footer rows and heading rows overlap. If so, adjust footer rows.
+		const footerRows = table.getAttribute( 'footerRows' ) as number || 0;
+
+		if ( truncatedHeadingRows + footerRows > totalRows ) {
+			const newFooterRows = totalRows - truncatedHeadingRows;
+
+			this.setFooterRowsCount( writer, table, newFooterRows );
+		}
+
+		// Further processing is not needed if cell type management is disabled. It's impossible to auto-expand
+		// heading rows without knowing cell types.
+		if ( !isTableCellTypeEnabled( this.editor ) ) {
+			return;
+		}
+
+		if ( updateCellType ) {
+			// Set header type to all cells in new heading rows.
+			for ( const { cell, row, column } of new TableWalker( table, { endRow: truncatedHeadingRows - 1 } ) ) {
+				updateTableCellType( {
+					table,
+					writer,
+					cell,
+					row,
+					column,
+					scopedHeaders
+				} );
+			}
+
+			// If heading rows were reduced, set body type to all cells in rows that are no longer in heading section.
+			if ( resetFormerHeadingCells && truncatedHeadingRows < oldHeadingRows ) {
+				for ( let row = truncatedHeadingRows; row < oldHeadingRows; row++ ) {
+					// Handle edge case when some cells were already changed to body type manually,
+					// before changing heading rows count.
+					if ( !isEntireCellsLineHeader( { table, row } ) ) {
+						break;
+					}
+
+					for ( const { cell, row: cellRow, column } of new TableWalker( table, { row } ) ) {
+						updateTableCellType( {
+							table,
+							writer,
+							cell,
+							row: cellRow,
+							column,
+							scopedHeaders
+						} );
+					}
+				}
+			}
+		}
+
+		// If following rows looks like header, expand heading rows to cover them.
+		if ( autoExpand && truncatedHeadingRows > oldHeadingRows ) {
+			while ( truncatedHeadingRows < totalRows && isEntireCellsLineHeader( { table, row: truncatedHeadingRows } ) ) {
+				truncatedHeadingRows++;
+			}
+
+			updateNumericAttribute( 'headingRows', truncatedHeadingRows, table, writer, 0 );
+		}
+	}
+
+	/**
+	 * Sets the number of heading columns for the given `table`.
+	 *
+	 * If number of heading columns is greater than the number of columns in the table,
+	 * it will be truncated to the number of columns.
+	 *
+	 * @param writer The model writer to use.
+	 * @param table The table model element.
+	 * @param headingColumns The number of heading columns to set.
+	 * @param options Additional options.
+	 * @param options.updateCellType If set to `false` it will only update the `headingColumns` attribute
+	 * without updating the cell types in the table. Default is `true`.
+	 * @param options.resetFormerHeadingCells If set to `true`, it will check if the columns that are no longer in the heading section
+	 * should be updated to body cells. Default is `true`.
+	 * @param options.autoExpand If set to `true`, it will check if the following columns look like a header and expand the heading section.
+	 * Default is `true`.
+	 */
+	public setHeadingColumnsCount(
+		writer: ModelWriter,
+		table: ModelElement,
+		headingColumns: number,
+		options: UpdateTableHeadingsOptions = {}
+	): void {
+		const {
+			updateCellType = true,
+			resetFormerHeadingCells = true,
+			autoExpand = true
+		} = options;
+
+		const totalColumns = this.getColumns( table );
+		const oldHeadingColumns = table.getAttribute( 'headingColumns' ) as number || 0;
+		const scopedHeaders = !!this.editor.config.get( 'table.tableCellProperties.scopedHeaders' );
+
+		let truncatedHeadingColumns = Math.min( headingColumns, totalColumns );
+
+		if ( truncatedHeadingColumns === oldHeadingColumns ) {
+			return;
+		}
+
+		updateNumericAttribute( 'headingColumns', truncatedHeadingColumns, table, writer, 0 );
+
+		// Further processing is not needed if cell type management is disabled. It's impossible to auto-expand
+		// heading columns without knowing cell types.
+		if ( !isTableCellTypeEnabled( this.editor ) ) {
+			return;
+		}
+
+		// Update cell types only when needed.
+		if ( updateCellType ) {
+			// Set header type to all cells in new heading columns.
+			for ( const { cell, row, column } of new TableWalker( table, { endColumn: truncatedHeadingColumns - 1 } ) ) {
+				updateTableCellType( {
+					table,
+					writer,
+					cell,
+					row,
+					column,
+					scopedHeaders
+				} );
+			}
+
+			// If heading columns were reduced, set body type to all cells in columns that are no longer in heading section.
+			if ( resetFormerHeadingCells && truncatedHeadingColumns < oldHeadingColumns ) {
+				for ( let column = truncatedHeadingColumns; column < oldHeadingColumns; column++ ) {
+					// Handle edge case when some cells were already changed to body type manually,
+					// before changing heading columns count.
+					if ( !isEntireCellsLineHeader( { table, column } ) ) {
+						break;
+					}
+
+					for ( const { cell, row, column: cellColumn } of new TableWalker( table, { column } ) ) {
+						updateTableCellType( {
+							table,
+							writer,
+							cell,
+							row,
+							column: cellColumn,
+							scopedHeaders
+						} );
+					}
+				}
+			}
+		}
+
+		// If following columns looks like header, expand heading columns to cover them.
+		if ( autoExpand && truncatedHeadingColumns > oldHeadingColumns ) {
+			while ( truncatedHeadingColumns < totalColumns && isEntireCellsLineHeader( { table, column: truncatedHeadingColumns } ) ) {
+				truncatedHeadingColumns++;
+			}
+
+			updateNumericAttribute( 'headingColumns', truncatedHeadingColumns, table, writer, 0 );
+		}
+	}
+
+	/**
 	 * Returns all model table cells that the provided model selection's ranges
-	 * {@link module:engine/model/range~Range#start} inside.
+	 * {@link module:engine/model/range~ModelRange#start} inside.
 	 *
 	 * To obtain the cells selected from the outside, use
 	 * {@link #getSelectedTableCells}.
 	 */
-	public getTableCellsContainingSelection( selection: Selection | DocumentSelection ): Array<Element> {
+	public getTableCellsContainingSelection( selection: ModelSelection | ModelDocumentSelection ): Array<ModelElement> {
 		const cells = [];
 
 		for ( const range of selection.getRanges() ) {
@@ -908,12 +1261,12 @@ export default class TableUtils extends Plugin {
 	/**
 	 * Returns all model table cells that are either completely selected
 	 * by selection ranges or host selection range
-	 * {@link module:engine/model/range~Range#start start positions} inside them.
+	 * {@link module:engine/model/range~ModelRange#start start positions} inside them.
 	 *
 	 * Combines {@link #getTableCellsContainingSelection} and
 	 * {@link #getSelectedTableCells}.
 	 */
-	public getSelectionAffectedTableCells( selection: Selection | DocumentSelection ): Array<Element> {
+	public getSelectionAffectedTableCells( selection: ModelSelection | ModelDocumentSelection ): Array<ModelElement> {
 		const selectedCells = this.getSelectedTableCells( selection );
 
 		if ( selectedCells.length ) {
@@ -936,8 +1289,8 @@ export default class TableUtils extends Plugin {
 	 *
 	 * @returns Returns an object with the `first` and `last` table row indexes.
 	 */
-	public getRowIndexes( tableCells: Array<Element> ): IndexesObject {
-		const indexes = tableCells.map( cell => ( cell.parent as Element ).index! );
+	public getRowIndexes( tableCells: Array<ModelElement> ): TableIndexesObject {
+		const indexes = tableCells.map( cell => ( cell.parent as ModelElement ).index! );
 
 		return this._getFirstLastIndexesObject( indexes );
 	}
@@ -955,7 +1308,7 @@ export default class TableUtils extends Plugin {
 	 *
 	 * @returns Returns an object with the `first` and `last` table column indexes.
 	 */
-	public getColumnIndexes( tableCells: Array<Element> ): IndexesObject {
+	public getColumnIndexes( tableCells: Array<ModelElement> ): TableIndexesObject {
 		const table = tableCells[ 0 ].findAncestor( 'table' )!;
 		const tableMap = [ ...new TableWalker( table ) ];
 
@@ -989,7 +1342,7 @@ export default class TableUtils extends Plugin {
 	 *   - a, c (the unselected cell "b" creates a gap)
 	 *   - f, g, h (cell "d" spans over a cell from the row of "f" cell - thus creates a gap)
 	 */
-	public isSelectionRectangular( selectedTableCells: Array<Element> ): boolean {
+	public isSelectionRectangular( selectedTableCells: Array<ModelElement> ): boolean {
 		if ( selectedTableCells.length < 2 || !this._areCellInTheSameTableSection( selectedTableCells ) ) {
 			return false;
 		}
@@ -1033,14 +1386,14 @@ export default class TableUtils extends Plugin {
 	/**
 	 * Returns array of sorted ranges.
 	 */
-	public sortRanges( ranges: Iterable<Range> ): Array<Range> {
+	public sortRanges( ranges: Iterable<ModelRange> ): Array<ModelRange> {
 		return Array.from( ranges ).sort( compareRangeOrder );
 	}
 
 	/**
 	 * Helper method to get an object with `first` and `last` indexes from an unsorted array of indexes.
 	 */
-	private _getFirstLastIndexesObject( indexes: Array<number> ): IndexesObject {
+	private _getFirstLastIndexesObject( indexes: Array<number> ): TableIndexesObject {
 		const allIndexesSorted = indexes.sort( ( indexA, indexB ) => indexA - indexB );
 
 		const first = allIndexesSorted[ 0 ];
@@ -1065,14 +1418,19 @@ export default class TableUtils extends Plugin {
 	 *  │ c │ c │ d │ d │
 	 *  └───┴───┴───┴───┘
 	 */
-	private _areCellInTheSameTableSection( tableCells: Array<Element> ): boolean {
+	private _areCellInTheSameTableSection( tableCells: Array<ModelElement> ): boolean {
 		const table = tableCells[ 0 ].findAncestor( 'table' )!;
+		const totalRows = this.getRows( table );
 
 		const rowIndexes = this.getRowIndexes( tableCells );
 		const headingRows = parseInt( table.getAttribute( 'headingRows' ) as string ) || 0;
+		const footerRows = parseInt( table.getAttribute( 'footerRows' ) as string ) || 0;
 
 		// Calculating row indexes is a bit cheaper so if this check fails we can't merge.
-		if ( !this._areIndexesInSameSection( rowIndexes, headingRows ) ) {
+		if (
+			!this._areIndexesInSameHeadingSection( rowIndexes, headingRows ) ||
+			!this._areIndexesInSameFooterSection( rowIndexes, totalRows, footerRows )
+		) {
 			return false;
 		}
 
@@ -1080,19 +1438,70 @@ export default class TableUtils extends Plugin {
 		const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) as string ) || 0;
 
 		// Similarly cells must be in same column section.
-		return this._areIndexesInSameSection( columnIndexes, headingColumns );
+		return this._areIndexesInSameHeadingSection( columnIndexes, headingColumns );
 	}
 
 	/**
 	 * Unified check if table rows/columns indexes are in the same heading/body section.
 	 */
-	private _areIndexesInSameSection( { first, last }: IndexesObject, headingSectionSize: number ): boolean {
+	private _areIndexesInSameHeadingSection( { first, last }: TableIndexesObject, headingSectionSize: number ): boolean {
 		const firstCellIsInHeading = first < headingSectionSize;
 		const lastCellIsInHeading = last < headingSectionSize;
 
 		return firstCellIsInHeading === lastCellIsInHeading;
 	}
+
+	/**
+	 * Unified check if table rows indexes are in the same footer/body section.
+	 */
+	private _areIndexesInSameFooterSection( { first, last }: TableIndexesObject, totalRows: number, footerRows: number ): boolean {
+		const footerStartIndex = totalRows - footerRows;
+
+		const firstCellIsInFooter = first >= footerStartIndex;
+		const lastCellIsInFooter = last >= footerStartIndex;
+
+		return firstCellIsInFooter === lastCellIsInFooter;
+	}
 }
+
+/**
+ * Options for the {@link module:table/tableutils~TableUtils#setHeadingRowsCount} and
+ * {@link module:table/tableutils~TableUtils#setHeadingColumnsCount} methods.
+ */
+export type UpdateTableHeadingsOptions = {
+
+	/**
+	 * If set to `false` it will only update the `headingRows`/`headingColumns` attribute
+	 * without updating the cell types in the table.
+	 *
+	 * This option has no effect if {@link module:table/tablecellproperties/tablecellpropertiesediting~TableCellPropertiesEditing}
+	 * is not loaded.
+	 *
+	 * @default true
+	 */
+	updateCellType?: boolean;
+
+	/**
+	 * If set to `true`, it will check if the rows/columns that are no longer in the heading section
+	 * should be updated to body cells.
+	 *
+	 * This option has no effect if {@link module:table/tablecellproperties/tablecellpropertiesediting~TableCellPropertiesEditing}
+	 * is not loaded.
+	 *
+	 * @default true
+	 */
+	resetFormerHeadingCells?: boolean;
+
+	/**
+	 * If set to `true`, it will check if the following rows/columns look like a header and expand the heading section.
+	 *
+	 * This option has no effect if {@link module:table/tablecellproperties/tablecellpropertiesediting~TableCellPropertiesEditing}
+	 * is not loaded.
+	 *
+	 * @default true
+	 */
+	autoExpand?: boolean;
+};
 
 /**
  * Creates empty rows at the given index in an existing table.
@@ -1101,14 +1510,22 @@ export default class TableUtils extends Plugin {
  * @param rows The number of rows to create.
  * @param tableCellToInsert The number of cells to insert in each row.
  */
-function createEmptyRows( writer: Writer, table: Element, insertAt: number, rows: number, tableCellToInsert: number, attributes = {} ) {
+function createEmptyRows(
+	writer: ModelWriter, table: ModelElement, insertAt: number, rows: number, tableCellToInsert: number, attributes = {}
+) {
+	const insertedRows: Array<Array<ModelElement>> = [];
+
 	for ( let i = 0; i < rows; i++ ) {
 		const tableRow = writer.createElement( 'tableRow' );
 
 		writer.insert( tableRow, table, insertAt );
 
-		createCells( tableCellToInsert, writer, writer.createPositionAt( tableRow, 'end' ), attributes );
+		insertedRows.push(
+			createCells( tableCellToInsert, writer, writer.createPositionAt( tableRow, 'end' ), attributes )
+		);
 	}
+
+	return insertedRows;
 }
 
 /**
@@ -1116,10 +1533,19 @@ function createEmptyRows( writer: Writer, table: Element, insertAt: number, rows
  *
  * @param cells The number of cells to create
  */
-function createCells( cells: number, writer: Writer, insertPosition: Position, attributes = {} ) {
+function createCells( cells: number, writer: ModelWriter, insertPosition: ModelPosition, attributes = {} ) {
+	const createdCells: Array<ModelElement> = [];
+	let currentPosition = insertPosition;
+
 	for ( let i = 0; i < cells; i++ ) {
-		createEmptyTableCell( writer, insertPosition, attributes );
+		const cell = createEmptyTableCell( writer, currentPosition, attributes );
+
+		createdCells.push( cell );
+
+		currentPosition = writer.createPositionAfter( cell );
 	}
+
+	return createdCells;
 }
 
 /**
@@ -1151,7 +1577,7 @@ function breakSpanEvenly( span: number, numberOfCells: number ): { newCellsSpan:
 /**
  * Updates heading columns attribute if removing a row from head section.
  */
-function adjustHeadingColumns( table: Element, removedColumnIndexes: IndexesObject, writer: Writer ) {
+function adjustHeadingColumns( table: ModelElement, removedColumnIndexes: TableIndexesObject, writer: ModelWriter ) {
 	const headingColumns = table.getAttribute( 'headingColumns' ) as number || 0;
 
 	if ( headingColumns && removedColumnIndexes.first < headingColumns ) {
@@ -1165,13 +1591,31 @@ function adjustHeadingColumns( table: Element, removedColumnIndexes: IndexesObje
 /**
  * Calculates a new heading rows value for removing rows from heading section.
  */
-function updateHeadingRows( table: Element, { first, last }: IndexesObject, writer: Writer ) {
+function updateHeadingRows( table: ModelElement, { first, last }: TableIndexesObject, writer: ModelWriter ) {
 	const headingRows = table.getAttribute( 'headingRows' ) as number || 0;
 
 	if ( first < headingRows ) {
 		const newRows = last < headingRows ? headingRows - ( last - first + 1 ) : first;
 
 		updateNumericAttribute( 'headingRows', newRows, table, writer, 0 );
+	}
+}
+
+/**
+ * Calculates a new footer rows value for removing rows from footer section.
+ */
+function updateFooterRows( table: ModelElement, totalRows: number, { first, last }: TableIndexesObject, writer: ModelWriter ) {
+	if ( !table.hasAttribute( 'footerRows' ) ) {
+		return;
+	}
+
+	const footerRows = table.getAttribute( 'footerRows' ) as number;
+	const footerIndex = totalRows - footerRows;
+
+	if ( last >= footerIndex ) {
+		const newRows = first >= footerIndex ? footerRows - ( last - first + 1 ) : totalRows - 1 - last;
+
+		updateNumericAttribute( 'footerRows', newRows, table, writer, 0 );
 	}
 }
 
@@ -1198,7 +1642,7 @@ function updateHeadingRows( table: Element, { first, last }: IndexesObject, writ
  * - cells to trim: '02', '03' & '04'.
  * - cells to move: '21' & '32'.
  */
-function getCellsToMoveAndTrimOnRemoveRow( table: Element, { first, last }: IndexesObject ) {
+function getCellsToMoveAndTrimOnRemoveRow( table: ModelElement, { first, last }: TableIndexesObject ) {
 	const cellsToMove: CellsToMove = new Map();
 	const cellsToTrim: CellsToTrim = [];
 
@@ -1241,7 +1685,7 @@ function getCellsToMoveAndTrimOnRemoveRow( table: Element, { first, last }: Inde
 	return { cellsToMove, cellsToTrim };
 }
 
-function moveCellsToRow( table: Element, targetRowIndex: number, cellsToMove: CellsToMove, writer: Writer ) {
+function moveCellsToRow( table: ModelElement, targetRowIndex: number, cellsToMove: CellsToMove, writer: ModelWriter ) {
 	const tableWalker = new TableWalker( table, {
 		includeAllSlots: true,
 		row: targetRowIndex
@@ -1271,7 +1715,7 @@ function moveCellsToRow( table: Element, targetRowIndex: number, cellsToMove: Ce
 	}
 }
 
-function compareRangeOrder( rangeA: Range, rangeB: Range ) {
+function compareRangeOrder( rangeA: ModelRange, rangeB: ModelRange ) {
 	// Since table cell ranges are disjoint, it's enough to check their start positions.
 	const posA = rangeA.start;
 	const posB = rangeB.start;
@@ -1295,4 +1739,47 @@ function getBiggestRectangleArea( rows: Set<number>, columns: Set<number> ): num
 	const firstColumn = Math.min( ...columnIndexes );
 
 	return ( lastRow - firstRow + 1 ) * ( lastColumn - firstColumn + 1 );
+}
+
+/**
+ * Updates the `tableCellType` attribute of a table cell based on its position in the table
+ * and the table's `headingRows` and `headingColumns` attributes.
+ */
+function updateTableCellType(
+	{
+		writer,
+		table,
+		row,
+		column,
+		cell,
+		scopedHeaders
+	}: {
+		writer: ModelWriter;
+		table: ModelElement;
+		row: number;
+		column: number;
+		cell: ModelElement;
+		scopedHeaders?: boolean;
+	}
+) {
+	const headingRows = table.getAttribute( 'headingRows' ) as number || 0;
+	const headingColumns = table.getAttribute( 'headingColumns' ) as number || 0;
+
+	if ( row >= headingRows && column >= headingColumns ) {
+		writer.removeAttribute( 'tableCellType', cell );
+		return;
+	}
+
+	let headerCellType: TableCellType = 'header';
+
+	// If scoped headers are enabled, we prefer to set 'row' or 'column' header types depending on the position.
+	if ( scopedHeaders ) {
+		if ( row < headingRows ) {
+			headerCellType = 'header-column';
+		} else {
+			headerCellType = 'header-row';
+		}
+	}
+
+	writer.setAttribute( 'tableCellType', headerCellType, cell );
 }

@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
-import { getData as getModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import ImageBlockEditing from '@ckeditor/ckeditor5-image/src/image/imageblockediting.js';
-import Widget from '@ckeditor/ckeditor5-widget/src/widget.js';
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { _getModelData } from '@ckeditor/ckeditor5-engine';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { ImageBlockEditing } from '@ckeditor/ckeditor5-image';
+import { Widget } from '@ckeditor/ckeditor5-widget';
 
-import { modelTable } from '../_utils/utils.js';
-import TableEditing from '../../src/tableediting.js';
+import { modelTable, viewTable } from '../_utils/utils.js';
+import { TableEditing } from '../../src/tableediting.js';
 
 describe( 'upcastTable()', () => {
 	let editor, model;
@@ -18,7 +18,10 @@ describe( 'upcastTable()', () => {
 	beforeEach( () => {
 		return ClassicTestEditor
 			.create( '', {
-				plugins: [ TableEditing, Paragraph, ImageBlockEditing, Widget ]
+				plugins: [ TableEditing, Paragraph, ImageBlockEditing, Widget ],
+				table: {
+					enableFooters: true
+				}
 			} )
 			.then( newEditor => {
 				editor = newEditor;
@@ -35,7 +38,7 @@ describe( 'upcastTable()', () => {
 	} );
 
 	function expectModel( data ) {
-		expect( getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( data );
+		expect( _getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( data );
 	}
 
 	it( 'should convert table figure', () => {
@@ -193,7 +196,7 @@ describe( 'upcastTable()', () => {
 		);
 
 		expectModel(
-			'<table>' +
+			'<table footerRows="1">' +
 			'<tableRow><tableCell><paragraph>1</paragraph></tableCell></tableRow>' +
 			'</table>'
 		);
@@ -409,6 +412,58 @@ describe( 'upcastTable()', () => {
 		);
 	} );
 
+	describe( 'in limited container allowing only inline content', () => {
+		beforeEach( () => {
+			model.schema.register( 'limitContainer', {
+				allowWhere: '$block',
+				allowContentOf: '$block',
+				isLimit: true
+			} );
+			editor.conversion.elementToElement( {
+				model: 'limitContainer',
+				view: 'div'
+			} );
+		} );
+
+		it( 'should strip table if parent does not allow it', () => {
+			editor.setData(
+				'<div>' +
+					'123' +
+					'<table>' +
+						'<tr>' +
+							'<td>foo</td>' +
+						'</tr>' +
+					'</table>' +
+					'456' +
+				'</div>'
+			);
+
+			expectModel(
+				'<limitContainer>123foo456</limitContainer>'
+			);
+		} );
+
+		it( 'should strip table in figure if parent does not allow it', () => {
+			editor.setData(
+				'<div>' +
+					'123' +
+					'<figure class="table">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</figure>' +
+					'456' +
+				'</div>'
+			);
+
+			expectModel(
+				'<limitContainer>123foo456</limitContainer>'
+			);
+		} );
+	} );
+
 	describe( 'headingColumns', () => {
 		it( 'should properly calculate heading columns', () => {
 			editor.setData(
@@ -432,62 +487,6 @@ describe( 'upcastTable()', () => {
 
 			expectModel(
 				'<table headingRows="1">' +
-				'<tableRow>' +
-					'<tableCell><paragraph>11</paragraph></tableCell>' +
-					'<tableCell><paragraph>12</paragraph></tableCell>' +
-					'<tableCell><paragraph>13</paragraph></tableCell>' +
-					'<tableCell><paragraph>14</paragraph></tableCell>' +
-				'</tableRow>' +
-				'<tableRow>' +
-					'<tableCell><paragraph>21</paragraph></tableCell>' +
-					'<tableCell><paragraph>22</paragraph></tableCell>' +
-					'<tableCell><paragraph>23</paragraph></tableCell>' +
-					'<tableCell><paragraph>24</paragraph></tableCell>' +
-				'</tableRow>' +
-				'<tableRow>' +
-					'<tableCell><paragraph>31</paragraph></tableCell>' +
-					'<tableCell><paragraph>32</paragraph></tableCell>' +
-					'<tableCell><paragraph>33</paragraph></tableCell>' +
-					'<tableCell><paragraph>34</paragraph></tableCell>' +
-				'</tableRow>' +
-				'<tableRow>' +
-					'<tableCell><paragraph>41</paragraph></tableCell>' +
-					'<tableCell><paragraph>42</paragraph></tableCell>' +
-					'<tableCell><paragraph>43</paragraph></tableCell>' +
-					'<tableCell><paragraph>44</paragraph></tableCell>' +
-				'</tableRow>' +
-				'<tableRow>' +
-					'<tableCell><paragraph>51</paragraph></tableCell>' +
-					'<tableCell><paragraph>52</paragraph></tableCell>' +
-					'<tableCell><paragraph>53</paragraph></tableCell>' +
-					'<tableCell><paragraph>54</paragraph></tableCell>' +
-				'</tableRow>' +
-				'</table>'
-			);
-		} );
-
-		it( 'should properly calculate heading columns when result is more than zero', () => {
-			editor.setData(
-				'<table>' +
-				'<tbody>' +
-				// This row starts with 2 th (3 total).
-				'<tr><th>31</th><th>32</th><td>33</td><th>34</th></tr>' +
-				// This row starts with 2 th (2 total).
-				'<tr><th>41</th><th>42</th><td>43</td><td>44</td></tr>' +
-				// This row starts with 1 th (1 total). This one has min number of heading columns: 1.
-				'<tr><th>51</th><td>52</td><td>53</td><td>54</td></tr>' +
-				// This row starts with 4 th (4 total).
-				'<tr><th>11</th><th>12</th><th>13</th><th>14</th></tr>' +
-				'</tbody>' +
-				'<thead>' +
-				// This row has 4 ths but it is a thead.
-				'<tr><th>21</th><th>22</th><th>23</th><th>24</th></tr>' +
-				'</thead>' +
-				'</table>'
-			);
-
-			expectModel(
-				'<table headingColumns="1" headingRows="2">' +
 				'<tableRow>' +
 					'<tableCell><paragraph>11</paragraph></tableCell>' +
 					'<tableCell><paragraph>12</paragraph></tableCell>' +
@@ -559,10 +558,293 @@ describe( 'upcastTable()', () => {
 				'</table>'
 			);
 		} );
+
+		it( 'should calculate heading columns of cells with rowspan', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						// This row's second <th> has a rowspan of 2 so it should "add" a <th>
+						// to the next row (which only has one)
+						'<tr><th>21</th><th rowspan="2">22</th><td>23</td><td>24</td></tr>' +
+						'<tr><th>31</th><td>33</td><td>34</td></tr>' +
+					'</tbody>' +
+					'<thead>' +
+						// This row has 4 ths but it is a thead.
+						'<tr><th>11</th><th>12</th><th>13</th><th>14</th></tr>' +
+					'</thead>' +
+				'</table>'
+			);
+
+			expectModel(
+				'<table headingColumns="2" headingRows="1">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>11</paragraph></tableCell>' +
+						'<tableCell><paragraph>12</paragraph></tableCell>' +
+						'<tableCell><paragraph>13</paragraph></tableCell>' +
+						'<tableCell><paragraph>14</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>21</paragraph></tableCell>' +
+						'<tableCell rowspan="2"><paragraph>22</paragraph></tableCell>' +
+						'<tableCell><paragraph>23</paragraph></tableCell>' +
+						'<tableCell><paragraph>24</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>31</paragraph></tableCell>' +
+						'<tableCell><paragraph>33</paragraph></tableCell>' +
+						'<tableCell><paragraph>34</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should calculate heading columns of cells with conflicting rowspan and colspan', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						// This row's second <th> has a rowspan of 2 so it should "add" a <th>
+						// to the next row (which only has one), except the next row's first <th>
+						// has a colspan of 2, so it overrides the rowspan
+						'<tr><th>21</th><th rowspan="2">22</th><th>23</th><td>24</td></tr>' +
+						'<tr><th colspan="2">31</th><td>33</td><td>34</td></tr>' +
+					'</tbody>' +
+					'<thead>' +
+						// This row has 4 ths but it is a thead.
+						'<tr><th>11</th><th>12</th><th>13</th><th>14</th></tr>' +
+					'</thead>' +
+				'</table>'
+			);
+
+			expectModel(
+				'<table headingColumns="2" headingRows="1">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>11</paragraph></tableCell>' +
+						'<tableCell><paragraph>12</paragraph></tableCell>' +
+						'<tableCell><paragraph>13</paragraph></tableCell>' +
+						'<tableCell><paragraph>14</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>21</paragraph></tableCell>' +
+						'<tableCell rowspan="2"><paragraph>22</paragraph></tableCell>' +
+						'<tableCell><paragraph>23</paragraph></tableCell>' +
+						'<tableCell><paragraph>24</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell colspan="2"><paragraph>31</paragraph></tableCell>' +
+						'<tableCell><paragraph>33</paragraph></tableCell>' +
+						'<tableCell><paragraph>34</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should properly calculate heading columns when result is more than zero', () => {
+			editor.setData(
+				'<table>' +
+				'<tbody>' +
+				// This row starts with 2 th (3 total).
+				'<tr><th>31</th><th>32</th><td>33</td><th>34</th></tr>' +
+				// This row starts with 2 th (2 total).
+				'<tr><th>41</th><th>42</th><td>43</td><td>44</td></tr>' +
+				// This row starts with 1 th (1 total). This one has min number of heading columns: 1.
+				'<tr><th>51</th><td>52</td><td>53</td><td>54</td></tr>' +
+				// This row starts with 4 th (4 total).
+				'<tr><th>11</th><th>12</th><th>13</th><th>14</th></tr>' +
+				'</tbody>' +
+				'<thead>' +
+				// This row has 4 ths but it is a thead.
+				'<tr><th>21</th><th>22</th><th>23</th><th>24</th></tr>' +
+				'</thead>' +
+				'</table>'
+			);
+
+			expectModel(
+				'<table headingColumns="1" headingRows="1">' +
+				'<tableRow>' +
+					'<tableCell><paragraph>21</paragraph></tableCell>' +
+					'<tableCell><paragraph>22</paragraph></tableCell>' +
+					'<tableCell><paragraph>23</paragraph></tableCell>' +
+					'<tableCell><paragraph>24</paragraph></tableCell>' +
+				'</tableRow>' +
+				'<tableRow>' +
+					'<tableCell><paragraph>31</paragraph></tableCell>' +
+					'<tableCell><paragraph>32</paragraph></tableCell>' +
+					'<tableCell><paragraph>33</paragraph></tableCell>' +
+					'<tableCell><paragraph>34</paragraph></tableCell>' +
+				'</tableRow>' +
+				'<tableRow>' +
+					'<tableCell><paragraph>41</paragraph></tableCell>' +
+					'<tableCell><paragraph>42</paragraph></tableCell>' +
+					'<tableCell><paragraph>43</paragraph></tableCell>' +
+					'<tableCell><paragraph>44</paragraph></tableCell>' +
+				'</tableRow>' +
+				'<tableRow>' +
+					'<tableCell><paragraph>51</paragraph></tableCell>' +
+					'<tableCell><paragraph>52</paragraph></tableCell>' +
+					'<tableCell><paragraph>53</paragraph></tableCell>' +
+					'<tableCell><paragraph>54</paragraph></tableCell>' +
+				'</tableRow>' +
+				'<tableRow>' +
+					'<tableCell><paragraph>11</paragraph></tableCell>' +
+					'<tableCell><paragraph>12</paragraph></tableCell>' +
+					'<tableCell><paragraph>13</paragraph></tableCell>' +
+					'<tableCell><paragraph>14</paragraph></tableCell>' +
+				'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should properly group heading rows in table containing multiple tbody', () => {
+			editor.setData( `
+				<figure class="table">
+					<table>
+						<thead>
+						<tr>
+							<th>Col Header 1</th>
+							<th>Col Header 2</th>
+							<th>Col Header 3</th>
+						</tr>
+						<tr>
+							<th colspan="3">Rowgroup Header 1</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr>
+							<th>Row Header 1</th>
+							<td>Data 1,1</td>
+							<td>Data 2,1</td>
+						</tr>
+						<tr>
+							<th colspan="3">Rowgroup Header 2</th>
+						</tr>
+						<tr>
+							<th>Row Header 2</th>
+							<td>Data 1,2</td>
+							<td>Data 2,2</td>
+						</tr>
+						<tr>
+							<th>Row Header 3</th>
+							<td>Data 1,3</td>
+							<td>Data 2,3</td>
+						</tr>
+						</tbody>
+					</table>
+				</figure>
+			` );
+
+			expectModel(
+				'<table headingColumns="1" headingRows="2">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Col Header 1</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 2</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 3</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell colspan="3"><paragraph>Rowgroup Header 1</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Row Header 1</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 1,1</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 2,1</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell colspan="3"><paragraph>Rowgroup Header 2</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Row Header 2</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 1,2</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 2,2</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Row Header 3</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 1,3</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 2,3</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should properly group heading rows in table containing multiple thead and multiple tbody', async () => {
+			// Only the first thead should be rendered on top of the table, so
+			// it only makes sense to not move the last thead table headers to heading rows.
+			editor.setData( `
+				<figure class="table">
+					<table>
+						<thead>
+							<tr>
+								<th>Col Header 1</th>
+								<th>Col Header 2</th>
+								<th>Col Header 3</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							<tr>
+								<th>Row Header 1</th>
+								<th>Row Header 2</td>
+								<th>Row Header 3</td>
+							</tr>
+
+							<tr>
+								<th>Row Header 4</th>
+								<th>Row Header 5</th>
+								<th>Row Header 6</th>
+							</tr>
+						</tbody>
+
+						<thead>
+							<tr>
+								<th>Col Header 4</th>
+								<th>Col Header 5</th>
+								<th>Col Header 6</th>
+							</tr>
+						</thead>
+
+						<tbody>
+							<tr>
+								<th>Data 4</th>
+								<th>Data 5</th>
+								<th>Data 6</th>
+							</tr>
+						</tbody>
+					</table>
+				</figure>
+			` );
+
+			expectModel(
+				'<table headingColumns="3" headingRows="3">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Col Header 1</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 2</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 3</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Row Header 1</paragraph></tableCell>' +
+						'<tableCell><paragraph>Row Header 2</paragraph></tableCell>' +
+						'<tableCell><paragraph>Row Header 3</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Row Header 4</paragraph></tableCell>' +
+						'<tableCell><paragraph>Row Header 5</paragraph></tableCell>' +
+						'<tableCell><paragraph>Row Header 6</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Col Header 4</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 5</paragraph></tableCell>' +
+						'<tableCell><paragraph>Col Header 6</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>Data 4</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 5</paragraph></tableCell>' +
+						'<tableCell><paragraph>Data 6</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
 	} );
 
 	describe( 'headingRows', () => {
-		it( 'should be able to detect heding row in 2x2 table', () => {
+		it( 'should be able to detect heading row in 2x2 table', () => {
 			editor.setData(
 				'<table>' +
 					'<tr>' +
@@ -590,7 +872,7 @@ describe( 'upcastTable()', () => {
 			);
 		} );
 
-		it( 'should be able to detect heding row in table with caption', () => {
+		it( 'should be able to detect heading row in table with caption', () => {
 			editor.setData(
 				'<table>' +
 					'<caption>Concerts</caption>' +
@@ -645,7 +927,7 @@ describe( 'upcastTable()', () => {
 			);
 		} );
 
-		it( 'should be able to detect heding row in 2x1 table', () => {
+		it( 'should be able to detect heading row in 2x1 table', () => {
 			editor.setData(
 				'<table>' +
 					'<tbody>' +
@@ -671,7 +953,7 @@ describe( 'upcastTable()', () => {
 			);
 		} );
 
-		it( 'should be able to detect heding row that has colspan', () => {
+		it( 'should be able to detect heading row that has colspan', () => {
 			editor.setData(
 				'<table>' +
 					'<tbody>' +
@@ -696,6 +978,108 @@ describe( 'upcastTable()', () => {
 						'<tableCell><paragraph>Data</paragraph></tableCell>' +
 						'<tableCell><paragraph>Data</paragraph></tableCell>' +
 						'<tableCell><paragraph>Data</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should not treat the row containing only th as a heading row if it follows rowspan=2', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						'<tr>' +
+							'<th>00</th>' +
+							'<td>01</td>' +
+							'<td>02</td>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>10</th>' +
+							'<td colspan="2" rowspan="2">11</td>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>20</th>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>30</th>' +
+							'<td>31</td>' +
+							'<td>32</td>' +
+						'</tr>' +
+					'</tbody>' +
+				'</table>'
+			);
+
+			expectModel(
+				'<table headingColumns="1">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>00</paragraph></tableCell>' +
+						'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'<tableCell><paragraph>02</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>10</paragraph></tableCell>' +
+						'<tableCell colspan="2" rowspan="2"><paragraph>11</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>20</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>30</paragraph></tableCell>' +
+						'<tableCell><paragraph>31</paragraph></tableCell>' +
+						'<tableCell><paragraph>32</paragraph></tableCell>' +
+					'</tableRow>' +
+				'</table>'
+			);
+		} );
+
+		it( 'should not treat the row containing only th as a heading row if it is last row of rowspan=3', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						'<tr>' +
+							'<th>00</th>' +
+							'<td>01</td>' +
+							'<td>02</td>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>10</th>' +
+							'<td colspan="2" rowspan="3">11</td>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>20</th>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>30</th>' +
+						'</tr>' +
+						'<tr>' +
+							'<th>40</th>' +
+							'<td>41</td>' +
+							'<td>42</td>' +
+						'</tr>' +
+					'</tbody>' +
+				'</table>'
+			);
+
+			expectModel(
+				'<table headingColumns="1">' +
+					'<tableRow>' +
+						'<tableCell><paragraph>00</paragraph></tableCell>' +
+						'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'<tableCell><paragraph>02</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>10</paragraph></tableCell>' +
+						'<tableCell colspan="2" rowspan="3"><paragraph>11</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>20</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>30</paragraph></tableCell>' +
+					'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell><paragraph>40</paragraph></tableCell>' +
+						'<tableCell><paragraph>41</paragraph></tableCell>' +
+						'<tableCell><paragraph>42</paragraph></tableCell>' +
 					'</tableRow>' +
 				'</table>'
 			);
@@ -779,14 +1163,14 @@ describe( 'upcastTable()', () => {
 				'<table>' +
 					'<tbody>' +
 						'<tr>' +
-							'<td><img src="sample.png"></td>' +
+							'<td><img src="/assets/sample.png"></td>' +
 						'</tr>' +
 					'</tbody>' +
 				'</table>'
 			);
 
 			expectModel( modelTable( [
-				[ '<imageBlock src="sample.png"></imageBlock>' ]
+				[ '<imageBlock src="/assets/sample.png"></imageBlock>' ]
 			] ) );
 		} );
 	} );
@@ -917,13 +1301,194 @@ describe( 'upcastTable()', () => {
 			);
 
 			expectModel(
-				'<table>' +
+				'<table footerRows="1">' +
 				'<tableRow><tableCell><paragraph>1</paragraph></tableCell></tableRow>' +
 				'<tableRow><tableCell><paragraph>2</paragraph></tableCell></tableRow>' +
 				'<tableRow><tableCell><paragraph>3</paragraph></tableCell></tableRow>' +
 				'<tableRow><tableCell><paragraph>4</paragraph></tableCell></tableRow>' +
 				'<tableRow><tableCell><paragraph>5</paragraph></tableCell></tableRow>' +
 				'</table>'
+			);
+		} );
+	} );
+
+	describe( 'footerRows', () => {
+		it( 'should properly upcast table with single tfoot child (single row)', () => {
+			editor.setData(
+				viewTable( [ [ '11', '12' ] ], { footerRows: 1 } )
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ]
+				], { footerRows: 1 } )
+			);
+		} );
+
+		it( 'should properly upcast table with single tfoot child (multiple rows)', () => {
+			editor.setData(
+				viewTable( [ [ '11', '12' ], [ '21', '22' ] ], { footerRows: 2 } )
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '21', '22' ]
+				], { footerRows: 2 } )
+			);
+		} );
+
+		it( 'should properly upcast table with multiple tfoot children', () => {
+			editor.setData(
+				'<table>' +
+					'<tfoot>' +
+						'<tr><td>11</td><td>12</td></tr>' +
+					'</tfoot>' +
+					'<tfoot>' +
+						'<tr><td>21</td><td>22</td></tr>' +
+						'<tr><td>31</td><td>32</td></tr>' +
+					'</tfoot>' +
+					'<tfoot>' +
+						'<tr><td>41</td><td>42</td></tr>' +
+					'</tfoot>' +
+				'</table>'
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '21', '22' ],
+					[ '31', '32' ],
+					[ '41', '42' ],
+					[ '11', '12' ]
+				], { footerRows: 4 } )
+			);
+		} );
+
+		it( 'should keep move `tfoot` to the bottom if placed between `tbody` (there are no other tfoot\'s)', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						'<tr><td>11</td><td>12</td></tr>' +
+					'</tbody>' +
+					'<tfoot>' +
+						'<tr><td>21</td><td>22</td></tr>' +
+					'</tfoot>' +
+					'<tbody>' +
+						'<tr><td>31</td><td>32</td></tr>' +
+					'</tbody>' +
+				'</table>'
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '31', '32' ],
+					[ '21', '22' ]
+				], { footerRows: 1 } )
+			);
+		} );
+
+		it( 'should move only the first `tfoot` to the bottom if multiple `tfoot` are present between `tbody`', () => {
+			editor.setData(
+				'<table>' +
+					'<tbody>' +
+						'<tr><td>11</td><td>12</td></tr>' +
+					'</tbody>' +
+					'<tfoot>' +
+						'<tr><td>21</td><td>22</td></tr>' +
+					'</tfoot>' +
+					'<tfoot>' +
+						'<tr><td>41</td><td>42</td></tr>' +
+					'</tfoot>' +
+					'<tbody>' +
+						'<tr><td>31</td><td>32</td></tr>' +
+					'</tbody>' +
+				'</table>'
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '41', '42' ],
+					[ '31', '32' ],
+					[ '21', '22' ]
+				], { footerRows: 1 } )
+			);
+		} );
+
+		it( 'should properly upcast `tfoot` with all cells heading', () => {
+			editor.setData( viewTable(
+				[
+					[ { contents: '11', isHeading: true }, { contents: '12', isHeading: true } ],
+					[ { contents: '21', isHeading: true }, { contents: '22', isHeading: true } ]
+				],
+				{ footerRows: 2 }
+			) );
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '21', '22' ]
+				], { footerRows: 2 } )
+			);
+		} );
+
+		it( 'should properly upcast `tfoot` and `thead` in the same table', () => {
+			editor.setData(
+				viewTable(
+					[
+						[ { contents: '11', isHeading: true }, { contents: '12', isHeading: true } ],
+						[ '21', '22' ]
+					],
+					{ headingRows: 1, footerRows: 1 }
+				)
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '21', '22' ]
+				], { headingRows: 1, footerRows: 1 } )
+			);
+		} );
+
+		it( 'should properly upcast `tfoot`, `tbody` and `thead` in the same table', () => {
+			editor.setData(
+				viewTable(
+					[
+						[ { contents: '11', isHeading: true }, { contents: '12', isHeading: true } ],
+						[ '21', '22' ],
+						[ '31', '32' ]
+					],
+					{ headingRows: 1, footerRows: 1 }
+				)
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '21', '22' ],
+					[ '31', '32' ]
+				], { headingRows: 1, footerRows: 1 } )
+			);
+		} );
+
+		it( 'should properly upcast `tfoot` (filled with `th`) and `thead` in the same table', () => {
+			editor.setData(
+				viewTable(
+					[
+						[ { contents: '11', isHeading: true }, { contents: '12', isHeading: true } ],
+						[ { contents: '21', isHeading: true }, { contents: '22', isHeading: true } ]
+					],
+					{ headingRows: 1, footerRows: 1 }
+				)
+			);
+
+			expect( _getModelData( editor.model, { withoutSelection: true } ) ).to.equal(
+				modelTable( [
+					[ '11', '12' ],
+					[ '21', '22' ]
+				], { headingRows: 1, footerRows: 1 } )
 			);
 		} );
 	} );

@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
+# Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
 #
 # Want to contribute to this file? Submit your changes via a GitHub Pull Request.
 #
@@ -139,10 +139,6 @@ msgctxt "The label for the group of toolbars that allows configuring the text al
 msgid "Table cell text alignment"
 msgstr "표 셀 텍스트 정렬"
 
-msgctxt "The label for the toolbar that allows configuring the alignment of a table."
-msgid "Alignment"
-msgstr "정렬"
-
 msgctxt "The label used by assistive technologies describing a toolbar that allows configuring the horizontal text alignment in a table cell."
 msgid "Horizontal text alignment toolbar"
 msgstr "가로 텍스트 정렬 도구 모음"
@@ -223,18 +219,6 @@ msgctxt "The label used by assistive technologies describing a button that align
 msgid "Align cell text to the bottom"
 msgstr "셀 텍스트를 아래로 정렬"
 
-msgctxt "The label used by assistive technologies describing a button that aligns the table to the left."
-msgid "Align table to the left"
-msgstr "테이블을 왼쪽으로 정렬"
-
-msgctxt "The label used by assistive technologies describing a button that centers the table."
-msgid "Center table"
-msgstr "테이블을 가운데로 정렬"
-
-msgctxt "The label used by assistive technologies describing a button that aligns the table to the right."
-msgid "Align table to the right"
-msgstr "테이블을 오른쪽으로 정렬"
-
 msgctxt "The localized error string that can be displayed next to color (background, border) fields that have an invalid value"
 msgid "The color is invalid. Try \"#FF0000\" or \"rgb(255,0,0)\" or \"red\"."
 msgstr "유효하지 않은 색입니다. \"#FF0000\"이나 \"rgb(255,0,0)\", 또는 \"red\"를 입력해 보세요."
@@ -270,3 +254,79 @@ msgstr "표 탐색"
 msgctxt "The accessible label of the menu bar button that displays a user interface to insert a table into editor content."
 msgid "Table"
 msgstr "표"
+
+msgctxt "Label for the insert table layout toolbar button."
+msgid "Insert table layout"
+msgstr "표 레이아웃 삽입"
+
+msgctxt "The accessible label used in the table layout insert UI element."
+msgid "Table layout"
+msgstr "표 레이아웃"
+
+msgctxt "The accessible label of the layout table type dropdown button."
+msgid "Layout table"
+msgstr "레이아웃 표"
+
+msgctxt "The accessible label of the content table type dropdown button."
+msgid "Content table"
+msgstr "콘텐츠 표"
+
+msgctxt "The accessible label of the table balloon button that displays a user interface to choose table type."
+msgid "Choose table type"
+msgstr "표 유형 선택"
+
+msgctxt "The accessible label of the table type toolbar button."
+msgid "Table type"
+msgstr "표 유형"
+
+msgctxt "The accessible label of dropdown list that displays a user interface to choose table type."
+msgid "Table type options"
+msgstr "표 유형 옵션"
+
+msgctxt "The label for the toolbar that allows configuring the alignment of a table."
+msgid "Table Alignment"
+msgstr "표 정렬"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the left as an inline element, allowing text to wrap around it."
+msgid "Align table to the left with text wrapping"
+msgstr "표를 왼쪽으로 정렬하고 텍스트 줄 바꿈"
+
+msgctxt "The label used by assistive technologies describing a button that centers the table as a block element with no text wrapping."
+msgid "Center table with no text wrapping"
+msgstr "표를 중앙 정렬하고 텍스트 줄 바꿈 없음"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the right as an inline element, allowing text to wrap around it."
+msgid "Align table to the right with text wrapping"
+msgstr "표를 오른쪽으로 정렬하고 텍스트 줄 바꿈"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the left as a block element with no text wrapping."
+msgid "Align table to the left with no text wrapping"
+msgstr "표를 왼쪽으로 정렬하고 텍스트 줄 바꿈 없음"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the right as a block element with no text wrapping."
+msgid "Align table to the right with no text wrapping"
+msgstr "표를 오른쪽으로 정렬하고 텍스트 줄 바꿈 없음"
+
+msgctxt "The label for the dropdown that allows configuring the type of a table cell (data or header)."
+msgid "Cell type"
+msgstr "셀 유형"
+
+msgctxt "The label for the dropdown option for a data table cell."
+msgid "Data cell"
+msgstr "데이터 셀"
+
+msgctxt "The label for the dropdown option for a header table cell."
+msgid "Header cell"
+msgstr "헤더 셀"
+
+msgctxt "Label for the set/unset table footer row button."
+msgid "Footer row"
+msgstr "바닥글 행"
+
+msgctxt "The label for the dropdown option for a header table cell that represents a column header."
+msgid "Column header"
+msgstr "열 머리글"
+
+msgctxt "The label for the dropdown option for a header table cell that represents a row header."
+msgid "Row header"
+msgstr "행 머리글"

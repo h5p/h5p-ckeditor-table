@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/ui/inserttableview
  */
 
-import { View, ButtonView, addKeyboardHandlingForGrid, type ViewCollection } from 'ckeditor5/src/ui.js';
+import { View, ButtonView, addKeyboardHandlingForGrid, type ViewCollection } from '@ckeditor/ckeditor5-ui';
 
-import { KeystrokeHandler, FocusTracker, type Locale } from 'ckeditor5/src/utils.js';
+import { KeystrokeHandler, FocusTracker, type Locale } from '@ckeditor/ckeditor5-utils';
 
 import './../../theme/inserttable.css';
 
@@ -17,8 +17,10 @@ import './../../theme/inserttable.css';
  * The table size view.
  *
  * It renders a 10x10 grid to choose the inserted table size.
+ *
+ * @internal
  */
-export default class InsertTableView extends View {
+export class InsertTableView extends View {
 	/**
 	 * A collection of table size box items.
 	 */

@@ -1,35 +1,50 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellproperties/tablecellpropertiesediting
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
+import { priorities } from '@ckeditor/ckeditor5-utils';
+import { type Editor, Plugin } from '@ckeditor/ckeditor5-core';
 import {
-	addBorderRules,
-	addPaddingRules,
-	addBackgroundRules,
-	type Schema,
+	Matcher,
+	addBorderStylesRules,
+	addPaddingStylesRules,
+	addBackgroundStylesRules,
+	type ModelSchema,
 	type Conversion,
-	type ViewElement
-} from 'ckeditor5/src/engine.js';
+	type ViewElement,
+	type UpcastConversionApi,
+	type UpcastConversionData,
+	type UpcastElementEvent,
+	type ModelElement
+} from '@ckeditor/ckeditor5-engine';
 
-import { downcastAttributeToStyle, upcastBorderStyles } from './../converters/tableproperties.js';
-import TableEditing from './../tableediting.js';
-import TableCellWidthEditing from '../tablecellwidth/tablecellwidthediting.js';
-import TableCellPaddingCommand from './commands/tablecellpaddingcommand.js';
-import TableCellHeightCommand from './commands/tablecellheightcommand.js';
-import TableCellBackgroundColorCommand from './commands/tablecellbackgroundcolorcommand.js';
-import TableCellVerticalAlignmentCommand from './commands/tablecellverticalalignmentcommand.js';
-import TableCellHorizontalAlignmentCommand from './commands/tablecellhorizontalalignmentcommand.js';
-import TableCellBorderStyleCommand from './commands/tablecellborderstylecommand.js';
-import TableCellBorderColorCommand from './commands/tablecellbordercolorcommand.js';
-import TableCellBorderWidthCommand from './commands/tablecellborderwidthcommand.js';
+import {
+	downcastAttributeToStyle,
+	getDefaultValueAdjusted,
+	upcastBorderStyles,
+	upcastTableCellPaddingAttribute
+} from '../converters/tableproperties.js';
+import { TableEditing } from './../tableediting.js';
+import { TableCellWidthEditing } from '../tablecellwidth/tablecellwidthediting.js';
+import { TableCellPaddingCommand } from './commands/tablecellpaddingcommand.js';
+import { TableCellHeightCommand } from './commands/tablecellheightcommand.js';
+import { TableCellBackgroundColorCommand } from './commands/tablecellbackgroundcolorcommand.js';
+import { TableCellVerticalAlignmentCommand } from './commands/tablecellverticalalignmentcommand.js';
+import { TableCellHorizontalAlignmentCommand } from './commands/tablecellhorizontalalignmentcommand.js';
+import { TableCellBorderStyleCommand } from './commands/tablecellborderstylecommand.js';
+import { TableCellBorderColorCommand } from './commands/tablecellbordercolorcommand.js';
+import { TableCellBorderWidthCommand } from './commands/tablecellborderwidthcommand.js';
+import { TableCellTypeCommand, updateTablesHeadingAttributes } from './commands/tablecelltypecommand.js';
 import { getNormalizedDefaultCellProperties } from '../utils/table-properties.js';
 import { enableProperty } from '../utils/common.js';
+import { TableUtils } from '../tableutils.js';
+import { TableWalker } from '../tablewalker.js';
+import { isTableHeaderCellType, type TableCellType } from './tablecellpropertiesutils.js';
 
 const VALIGN_VALUES_REG_EXP = /^(top|middle|bottom)$/;
 const ALIGN_VALUES_REG_EXP = /^(left|center|right|justify)$/;
@@ -53,7 +68,7 @@ const ALIGN_VALUES_REG_EXP = /^(left|center|right|justify)$/;
  * - horizontal and vertical alignment: the `'tableCellHorizontalAlignment'` and `'tableCellVerticalAlignment'` commands
  * - width and height: the `'tableCellWidth'` and `'tableCellHeight'` commands
  */
-export default class TableCellPropertiesEditing extends Plugin {
+export class TableCellPropertiesEditing extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
@@ -63,8 +78,23 @@ export default class TableCellPropertiesEditing extends Plugin {
 
 	/**
 	 * @inheritDoc
+	 * @internal
+	 */
+	public static get licenseFeatureCode(): string {
+		return 'TCP';
+	}
+
+	/**
+	 * @inheritDoc
 	 */
 	public static override get isOfficialPlugin(): true {
+		return true;
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	public static override get isPremiumPlugin(): true {
 		return true;
 	}
 
@@ -95,8 +125,8 @@ export default class TableCellPropertiesEditing extends Plugin {
 			}
 		);
 
-		editor.data.addStyleProcessorRules( addBorderRules );
-		enableBorderProperties( schema, conversion, {
+		editor.data.addStyleProcessorRules( addBorderStylesRules );
+		enableBorderProperties( editor, {
 			color: defaultTableCellProperties.borderColor,
 			style: defaultTableCellProperties.borderStyle,
 			width: defaultTableCellProperties.borderWidth
@@ -108,23 +138,28 @@ export default class TableCellPropertiesEditing extends Plugin {
 		enableProperty( schema, conversion, {
 			modelAttribute: 'tableCellHeight',
 			styleName: 'height',
+			attributeName: 'height',
+			attributeType: 'length',
 			defaultValue: defaultTableCellProperties.height
 		} );
 		editor.commands.add( 'tableCellHeight', new TableCellHeightCommand( editor, defaultTableCellProperties.height ) );
 
-		editor.data.addStyleProcessorRules( addPaddingRules );
+		editor.data.addStyleProcessorRules( addPaddingStylesRules );
 		enableProperty( schema, conversion, {
 			modelAttribute: 'tableCellPadding',
 			styleName: 'padding',
 			reduceBoxSides: true,
 			defaultValue: defaultTableCellProperties.padding!
 		} );
+		enableTableCellPaddingAttribute( editor, defaultTableCellProperties.padding! );
 		editor.commands.add( 'tableCellPadding', new TableCellPaddingCommand( editor, defaultTableCellProperties.padding! ) );
 
-		editor.data.addStyleProcessorRules( addBackgroundRules );
+		editor.data.addStyleProcessorRules( addBackgroundStylesRules );
 		enableProperty( schema, conversion, {
 			modelAttribute: 'tableCellBackgroundColor',
 			styleName: 'background-color',
+			attributeName: 'bgcolor',
+			attributeType: 'color',
 			defaultValue: defaultTableCellProperties.backgroundColor
 		} );
 		editor.commands.add(
@@ -133,6 +168,8 @@ export default class TableCellPropertiesEditing extends Plugin {
 		);
 
 		enableHorizontalAlignmentProperty( schema, conversion, defaultTableCellProperties.horizontalAlignment! );
+		enableLegacyHorizontalAlignmentAttribute( conversion );
+
 		editor.commands.add(
 			'tableCellHorizontalAlignment',
 			new TableCellHorizontalAlignmentCommand( editor, defaultTableCellProperties.horizontalAlignment! )
@@ -143,18 +180,28 @@ export default class TableCellPropertiesEditing extends Plugin {
 			'tableCellVerticalAlignment',
 			new TableCellVerticalAlignmentCommand( editor, defaultTableCellProperties.verticalAlignment! )
 		);
+
+		enableCellTypeProperty( editor );
+		editor.commands.add( 'tableCellType', new TableCellTypeCommand( editor ) );
 	}
 }
 
 /**
  * Enables the `'tableCellBorderStyle'`, `'tableCellBorderColor'` and `'tableCellBorderWidth'` attributes for table cells.
  *
+ * @param editor The editor instance.
  * @param defaultBorder The default border values.
  * @param defaultBorder.color The default `tableCellBorderColor` value.
  * @param defaultBorder.style The default `tableCellBorderStyle` value.
  * @param defaultBorder.width The default `tableCellBorderWidth` value.
  */
-function enableBorderProperties( schema: Schema, conversion: Conversion, defaultBorder: { color: string; style: string; width: string } ) {
+function enableBorderProperties(
+	editor: Editor,
+	defaultBorder: { color: string; style: string; width: string }
+) {
+	const { conversion } = editor;
+	const { schema } = editor.model;
+
 	const modelAttributes = {
 		width: 'tableCellBorderWidth',
 		color: 'tableCellBorderColor',
@@ -165,8 +212,12 @@ function enableBorderProperties( schema: Schema, conversion: Conversion, default
 		allowAttributes: Object.values( modelAttributes )
 	} );
 
-	upcastBorderStyles( conversion, 'td', modelAttributes, defaultBorder );
-	upcastBorderStyles( conversion, 'th', modelAttributes, defaultBorder );
+	for ( const modelAttribute of Object.values( modelAttributes ) ) {
+		schema.setAttributeProperties( modelAttribute, { isFormatting: true } );
+	}
+
+	upcastBorderStyles( editor, 'td', modelAttributes, defaultBorder );
+	upcastBorderStyles( editor, 'th', modelAttributes, defaultBorder );
 	downcastAttributeToStyle( conversion, { modelElement: 'tableCell', modelAttribute: modelAttributes.style, styleName: 'border-style' } );
 	downcastAttributeToStyle( conversion, { modelElement: 'tableCell', modelAttribute: modelAttributes.color, styleName: 'border-color' } );
 	downcastAttributeToStyle( conversion, { modelElement: 'tableCell', modelAttribute: modelAttributes.width, styleName: 'border-width' } );
@@ -177,10 +228,12 @@ function enableBorderProperties( schema: Schema, conversion: Conversion, default
  *
  * @param defaultValue The default horizontal alignment value.
  */
-function enableHorizontalAlignmentProperty( schema: Schema, conversion: Conversion, defaultValue: string ) {
+function enableHorizontalAlignmentProperty( schema: ModelSchema, conversion: Conversion, defaultValue: string ) {
 	schema.extend( 'tableCell', {
 		allowAttributes: [ 'tableCellHorizontalAlignment' ]
 	} );
+
+	schema.setAttributeProperties( 'tableCellHorizontalAlignment', { isFormatting: true } );
 
 	conversion.for( 'downcast' )
 		.attributeToAttribute( {
@@ -207,30 +260,93 @@ function enableHorizontalAlignmentProperty( schema: Schema, conversion: Conversi
 			},
 			model: {
 				key: 'tableCellHorizontalAlignment',
-				value: ( viewElement: ViewElement ) => {
+				value: ( viewElement: ViewElement, conversionApi: UpcastConversionApi, data: UpcastConversionData<ViewElement> ) => {
+					const localDefaultValue = getDefaultValueAdjusted( defaultValue, 'left', data );
 					const align = viewElement.getStyle( 'text-align' );
 
-					return align === defaultValue ? null : align;
-				}
-			}
-		} )
-		// Support for the `align` attribute as the backward compatibility while pasting from other sources.
-		.attributeToAttribute( {
-			view: {
-				name: /^(td|th)$/,
-				attributes: {
-					align: ALIGN_VALUES_REG_EXP
-				}
-			},
-			model: {
-				key: 'tableCellHorizontalAlignment',
-				value: ( viewElement: ViewElement ) => {
-					const align = viewElement.getAttribute( 'align' );
+					if ( align !== localDefaultValue ) {
+						return align;
+					}
 
-					return align === defaultValue ? null : align;
+					// Consume the style even if not applied to the element so it won't be processed by other converters.
+					conversionApi.consumable.consume( viewElement, { styles: 'text-align' } );
 				}
 			}
 		} );
+}
+
+/**
+ * Upcasts legacy `td[align]` property to proper block alignment attributes in child elements.
+ * If there is no block alignment property supported on the element, then the `alignment` fallback will be used.
+ *
+ * See: https://github.com/ckeditor/ckeditor5/issues/20042
+ */
+function enableLegacyHorizontalAlignmentAttribute( conversion: Conversion ) {
+	conversion.for( 'upcast' ).add( dispatcher => {
+		const matcher = new Matcher( {
+			name: /^(td|th)$/,
+			attributes: {
+				align: ALIGN_VALUES_REG_EXP
+			}
+		} );
+
+		dispatcher.on<UpcastElementEvent>( 'element', ( evt, data, conversionApi ) => {
+			const matcherResult = matcher.match( data.viewItem );
+
+			if ( !matcherResult ) {
+				return;
+			}
+
+			const modelElement = data.modelRange?.start.nodeAfter;
+
+			/* istanbul ignore if -- @preserve */
+			if ( !modelElement?.is( 'element' ) ) {
+				return;
+			}
+
+			const alignValue = data.viewItem.getAttribute( 'align' )!;
+
+			if ( !conversionApi.consumable.consume( data.viewItem, { attributes: [ 'align' ] } ) ) {
+				return;
+			}
+
+			for ( const child of modelElement.getChildren() ) {
+				if ( child.is( 'element' ) ) {
+					applyAlignmentToChild( child, alignValue, conversionApi );
+				}
+			}
+		}, { priority: 'low' } );
+	} );
+
+	function applyAlignmentToChild( child: ModelElement, alignValue: string, { schema, writer }: UpcastConversionApi ): void {
+		const definition = schema.getDefinition( child );
+
+		if ( definition ) {
+			for ( const attrName of definition.allowAttributes ) {
+				if ( child.hasAttribute( attrName ) ) {
+					continue;
+				}
+
+				const { blockAlignment } = schema.getAttributeProperties( attrName );
+
+				if ( !blockAlignment ) {
+					continue;
+				}
+
+				const blockAlignmentMapping = typeof blockAlignment === 'function' ?
+					blockAlignment( child ) :
+					blockAlignment;
+
+				const mappedValue = blockAlignmentMapping[ alignValue ];
+
+				if ( mappedValue && !mappedValue.isDefault ) {
+					writer.setAttribute( attrName, mappedValue.value, child );
+				}
+
+				return;
+			}
+		}
+	}
 }
 
 /**
@@ -238,10 +354,12 @@ function enableHorizontalAlignmentProperty( schema: Schema, conversion: Conversi
  *
  * @param defaultValue The default vertical alignment value.
  */
-function enableVerticalAlignmentProperty( schema: Schema, conversion: Conversion, defaultValue: string ) {
+function enableVerticalAlignmentProperty( schema: ModelSchema, conversion: Conversion, defaultValue: string ) {
 	schema.extend( 'tableCell', {
 		allowAttributes: [ 'tableCellVerticalAlignment' ]
 	} );
+
+	schema.setAttributeProperties( 'tableCellVerticalAlignment', { isFormatting: true } );
 
 	conversion.for( 'downcast' )
 		.attributeToAttribute( {
@@ -268,10 +386,16 @@ function enableVerticalAlignmentProperty( schema: Schema, conversion: Conversion
 			},
 			model: {
 				key: 'tableCellVerticalAlignment',
-				value: ( viewElement: ViewElement ) => {
+				value: ( viewElement: ViewElement, conversionApi: UpcastConversionApi, data: UpcastConversionData<ViewElement> ) => {
+					const localDefaultValue = getDefaultValueAdjusted( defaultValue, 'middle', data );
 					const align = viewElement.getStyle( 'vertical-align' );
 
-					return align === defaultValue ? null : align;
+					if ( align !== localDefaultValue ) {
+						return align;
+					}
+
+					// Consume the style even if not applied to the element so it won't be processed by other converters.
+					conversionApi.consumable.consume( viewElement, { styles: 'vertical-align' } );
 				}
 			}
 		} )
@@ -285,11 +409,217 @@ function enableVerticalAlignmentProperty( schema: Schema, conversion: Conversion
 			},
 			model: {
 				key: 'tableCellVerticalAlignment',
-				value: ( viewElement: ViewElement ) => {
+				value: ( viewElement: ViewElement, conversionApi: UpcastConversionApi, data: UpcastConversionData<ViewElement> ) => {
+					const localDefaultValue = getDefaultValueAdjusted( defaultValue, 'middle', data );
 					const valign = viewElement.getAttribute( 'valign' );
 
-					return valign === defaultValue ? null : valign;
+					if ( valign !== localDefaultValue ) {
+						return valign;
+					}
+
+					// Consume the attribute even if not applied to the element so it won't be processed by other converters.
+					conversionApi.consumable.consume( viewElement, { attributes: 'valign' } );
 				}
 			}
 		} );
+}
+
+/**
+ * Enables the `tableCellType` attribute for table cells.
+ */
+function enableCellTypeProperty( editor: Editor ) {
+	const { model, conversion, editing, config } = editor;
+	const { schema } = model;
+
+	config.define( 'table.tableCellProperties.scopedHeaders', true );
+
+	const scopedHeaders = !!config.get( 'table.tableCellProperties.scopedHeaders' );
+	const tableUtils = editor.plugins.get( TableUtils );
+
+	schema.extend( 'tableCell', {
+		allowAttributes: [ 'tableCellType' ]
+	} );
+
+	schema.setAttributeProperties( 'tableCellType', {
+		isFormatting: true
+	} );
+
+	// Do not allow setting `tableCellType` in layout tables.
+	schema.addAttributeCheck( context => {
+		const nearestTable = Array.from( context ).reverse().find( item => item.name === 'table' );
+
+		if ( nearestTable?.getAttribute( 'tableType' ) === 'layout' ) {
+			return false;
+		}
+	}, 'tableCellType' );
+
+	// Upcast conversion for td/th elements.
+	conversion.for( 'upcast' ).add( dispatcher => {
+		dispatcher.on<UpcastElementEvent>( 'element:th', ( evt, data, conversionApi ) => {
+			const { writer } = conversionApi;
+			const { modelRange } = data;
+			const modelElement = modelRange?.start.nodeAfter;
+
+			if ( modelElement?.is( 'element', 'tableCell' ) && !modelElement.hasAttribute( 'tableCellType' ) ) {
+				writer.setAttribute( 'tableCellType', 'header', modelElement );
+			}
+		} );
+
+		// Table type is examined after all other cell converters, on low priority, so
+		// we double check if there is any `th` left in the table. If so, the table is converted to a content table.
+		dispatcher.on<UpcastElementEvent>( 'element:table', ( evt, data, conversionApi ) => {
+			const { writer } = conversionApi;
+			const { modelRange } = data;
+			const modelElement = modelRange?.start.nodeAfter;
+
+			if ( modelElement?.is( 'element', 'table' ) && modelElement.getAttribute( 'tableType' ) === 'layout' ) {
+				for ( const { cell } of new TableWalker( modelElement ) ) {
+					const tableCellType = cell.getAttribute( 'tableCellType' ) as TableCellType;
+
+					if ( isTableHeaderCellType( tableCellType ) ) {
+						writer.setAttribute( 'tableType', 'content', modelElement );
+						break;
+					}
+				}
+			}
+		}, { priority: priorities.low - 1 } );
+	} );
+
+	// If scoped headers are enabled, add conversion for the `scope` attribute.
+	if ( scopedHeaders ) {
+		conversion.for( 'downcast' ).attributeToAttribute( {
+			model: {
+				name: 'tableCell',
+				key: 'tableCellType'
+			},
+			view: ( modelAttributeValue: TableCellType ) => {
+				switch ( modelAttributeValue ) {
+					case 'header-row':
+						return { key: 'scope', value: 'row' };
+
+					case 'header-column':
+						return { key: 'scope', value: 'col' };
+				}
+			}
+		} );
+
+		// Attribute to attribute conversion tend to not override existing `tableCellType` set by other converters.
+		// However, in this scenario if the previous converter set `tableCellType` to `header`, we can adjust it
+		// based on the `scope` attribute.
+		conversion.for( 'upcast' ).add( dispatcher => {
+			dispatcher.on<UpcastElementEvent>( 'element:th', ( _, data, conversionApi ) => {
+				const { writer, consumable } = conversionApi;
+				const { viewItem, modelRange } = data;
+
+				const modelElement = modelRange!.start.nodeAfter!;
+				const previousTableCellType = modelElement?.getAttribute( 'tableCellType' ) as TableCellType | undefined;
+
+				if ( previousTableCellType === 'header' && consumable.consume( viewItem, { attributes: [ 'scope' ] } ) ) {
+					const scope = viewItem.getAttribute( 'scope' );
+
+					switch ( scope ) {
+						case 'row':
+							writer.setAttribute( 'tableCellType', 'header-row', modelElement );
+							break;
+
+						case 'col':
+							writer.setAttribute( 'tableCellType', 'header-column', modelElement );
+							break;
+					}
+				}
+			} );
+		} );
+	}
+
+	// Registers a post-fixer that ensures the `headingRows` and `headingColumns` attributes
+	// are consistent with the `tableCellType` attribute of the cells. `tableCellType` has priority
+	// over `headingRows` and `headingColumns` and we use it to adjust the heading sections of the table.
+	model.document.registerPostFixer( writer => {
+		// 1. Collect all tables that need to be checked.
+		const changes = model.document.differ.getChanges();
+		const tablesToCheck = new Set<ModelElement>();
+
+		for ( const change of changes ) {
+			// Check if headingRows or headingColumns changed.
+			if ( change.type === 'attribute' && ( change.attributeKey === 'headingRows' || change.attributeKey === 'headingColumns' ) ) {
+				const table = change.range.start.nodeAfter as ModelElement;
+
+				if ( table?.is( 'element', 'table' ) && table.root.rootName !== '$graveyard' ) {
+					tablesToCheck.add( table );
+				}
+			}
+
+			// Check if tableCellType changed.
+			if ( change.type === 'attribute' && change.attributeKey === 'tableCellType' ) {
+				const cell = change.range.start.nodeAfter as ModelElement;
+
+				if ( cell?.is( 'element', 'tableCell' ) && cell.root.rootName !== '$graveyard' ) {
+					const table = cell.findAncestor( 'table' ) as ModelElement;
+
+					if ( table ) {
+						tablesToCheck.add( table );
+					}
+				}
+			}
+
+			// Check if new headers were inserted.
+			if ( change.type === 'insert' && change.position.nodeAfter ) {
+				for ( const { item } of model.createRangeOn( change.position.nodeAfter ) ) {
+					if (
+						item.is( 'element', 'tableCell' ) &&
+						item.getAttribute( 'tableCellType' ) &&
+						item.root.rootName !== '$graveyard'
+					) {
+						const table = item.findAncestor( 'table' ) as ModelElement;
+
+						if ( table ) {
+							tablesToCheck.add( table );
+						}
+					}
+				}
+			}
+		}
+
+		// 2. Update the attributes of the collected tables.
+		return updateTablesHeadingAttributes( tableUtils, writer, tablesToCheck );
+	} );
+
+	// Refresh the table cells in the editing view when their `tableCellType` attribute changes.
+	model.document.on( 'change:data', () => {
+		const { differ } = model.document;
+		const cellsToReconvert = new Set<ModelElement>();
+
+		for ( const change of differ.getChanges() ) {
+			// If the `tableCellType` attribute changed, the entire cell needs to be re-rendered.
+			if ( change.type === 'attribute' && change.attributeKey === 'tableCellType' ) {
+				const tableCell = change.range.start.nodeAfter as ModelElement;
+
+				if ( tableCell.is( 'element', 'tableCell' ) ) {
+					cellsToReconvert.add( tableCell );
+				}
+			}
+		}
+
+		// Reconvert table cells that had their `tableCellType` attribute changed.
+		for ( const tableCell of cellsToReconvert ) {
+			const viewElement = editing.mapper.toViewElement( tableCell );
+			const cellType = tableCell.getAttribute( 'tableCellType' ) as TableCellType;
+			const expectedElementName = isTableHeaderCellType( cellType ) ? 'th' : 'td';
+
+			if ( viewElement?.name !== expectedElementName ) {
+				editing.reconvertItem( tableCell );
+			}
+		}
+	} );
+}
+
+/**
+ * Enables the upcasting of the `cellpadding` attribute from table to table cells padding.
+ *
+ * @param editor The editor instance.
+ * @param defaultPadding The default padding value.
+ */
+function enableTableCellPaddingAttribute( editor: Editor, defaultPadding: string ) {
+	upcastTableCellPaddingAttribute( editor, 'td', defaultPadding );
+	upcastTableCellPaddingAttribute( editor, 'th', defaultPadding );
 }

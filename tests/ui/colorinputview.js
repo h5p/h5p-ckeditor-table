@@ -1,17 +1,11 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* global document, Event */
-
-import ColorInputView from '../../src/ui/colorinputview.js';
-import InputTextView from '@ckeditor/ckeditor5-ui/src/inputtext/inputtextview.js';
-import ColorGridView from '@ckeditor/ckeditor5-ui/src/colorgrid/colorgridview.js';
-import DropdownView from '@ckeditor/ckeditor5-ui/src/dropdown/dropdownview.js';
-import { ButtonView, FocusCycler, ViewCollection } from '@ckeditor/ckeditor5-ui';
-import { FocusTracker, KeystrokeHandler, keyCodes } from '@ckeditor/ckeditor5-utils';
-import { global } from 'ckeditor5/src/utils.js';
+import { ColorInputView } from '../../src/ui/colorinputview.js';
+import { InputTextView, ColorGridView, DropdownView, ButtonView, FocusCycler, ViewCollection } from '@ckeditor/ckeditor5-ui';
+import { FocusTracker, KeystrokeHandler, keyCodes, global } from '@ckeditor/ckeditor5-utils';
 
 const DEFAULT_COLORS = [
 	{

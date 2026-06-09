@@ -1,34 +1,40 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/utils/common
  */
 
+import type { Editor } from '@ckeditor/ckeditor5-core';
 import type {
 	Conversion,
-	Element,
-	Item,
-	Position,
-	Schema,
-	Writer,
-	DocumentSelection
-} from 'ckeditor5/src/engine.js';
+	ModelElement,
+	ModelItem,
+	ModelPosition,
+	ModelSchema,
+	ModelWriter,
+	ModelDocumentSelection
+} from '@ckeditor/ckeditor5-engine';
 
-import { downcastAttributeToStyle, upcastStyleToAttribute } from './../converters/tableproperties.js';
-import type TableUtils from '../tableutils.js';
+import { downcastAttributeToStyle, upcastStyleToAttribute } from '../converters/tableproperties.js';
+import { type TableUtils } from '../tableutils.js';
+import { TableWalker } from '../tablewalker.js';
+import { isTableHeaderCellType, type TableCellType } from '../tablecellproperties/tablecellpropertiesutils.js';
 
 /**
  * A common method to update the numeric value. If a value is the default one, it will be unset.
  *
+ * @internal
  * @param key An attribute key.
  * @param value The new attribute value.
  * @param item A model item on which the attribute will be set.
  * @param defaultValue The default attribute value. If a value is lower or equal, it will be unset.
  */
-export function updateNumericAttribute( key: string, value: unknown, item: Item, writer: Writer, defaultValue: unknown = 1 ): void {
+export function updateNumericAttribute(
+	key: string, value: unknown, item: ModelItem, writer: ModelWriter, defaultValue: unknown = 1
+): void {
 	if ( value !== undefined && value !== null && defaultValue !== undefined && defaultValue !== null && value > defaultValue ) {
 		writer.setAttribute( key, value, item );
 	} else {
@@ -39,12 +45,17 @@ export function updateNumericAttribute( key: string, value: unknown, item: Item,
 /**
  * A common method to create an empty table cell. It creates a proper model structure as a table cell must have at least one block inside.
  *
+ * @internal
  * @param writer The model writer.
  * @param insertPosition The position at which the table cell should be inserted.
  * @param attributes The element attributes.
  * @returns Created table cell.
  */
-export function createEmptyTableCell( writer: Writer, insertPosition: Position, attributes: Record<string, unknown> = {} ): Element {
+export function createEmptyTableCell(
+	writer: ModelWriter,
+	insertPosition: ModelPosition,
+	attributes: Record<string, unknown> = {}
+): ModelElement {
 	const tableCell = writer.createElement( 'tableCell', attributes );
 
 	writer.insertElement( 'paragraph', tableCell );
@@ -55,9 +66,11 @@ export function createEmptyTableCell( writer: Writer, insertPosition: Position, 
 
 /**
  * Checks if a table cell belongs to the heading column section.
+ *
+ * @internal
  */
-export function isHeadingColumnCell( tableUtils: TableUtils, tableCell: Element ): boolean {
-	const table = tableCell.parent!.parent as Element;
+export function isHeadingColumnCell( tableUtils: TableUtils, tableCell: ModelElement ): boolean {
+	const table = tableCell.parent!.parent as ModelElement;
 	const headingColumns = parseInt( table.getAttribute( 'headingColumns' ) as string || '0' );
 	const { column } = tableUtils.getCellLocation( tableCell );
 
@@ -67,14 +80,17 @@ export function isHeadingColumnCell( tableUtils: TableUtils, tableCell: Element 
 /**
  * Enables conversion for an attribute for simple view-model mappings.
  *
+ * @internal
  * @param options.defaultValue The default value for the specified `modelAttribute`.
  */
 export function enableProperty(
-	schema: Schema,
+	schema: ModelSchema,
 	conversion: Conversion,
 	options: {
 		modelAttribute: string;
 		styleName: string;
+		attributeName?: string;
+		attributeType?: 'length' | 'color';
 		defaultValue: string;
 		reduceBoxSides?: boolean;
 	}
@@ -85,14 +101,18 @@ export function enableProperty(
 		allowAttributes: [ modelAttribute ]
 	} );
 
+	schema.setAttributeProperties( modelAttribute, { isFormatting: true } );
+
 	upcastStyleToAttribute( conversion, { viewElement: /^(td|th)$/, ...options } );
 	downcastAttributeToStyle( conversion, { modelElement: 'tableCell', ...options } );
 }
 
 /**
  * Depending on the position of the selection we either return the table under cursor or look for the table higher in the hierarchy.
+ *
+ * @internal
  */
-export function getSelectionAffectedTable( selection: DocumentSelection ): Element {
+export function getSelectionAffectedTable( selection: ModelDocumentSelection ): ModelElement {
 	const selectedElement = selection.getSelectedElement();
 
 	// Is the command triggered from the `tableToolbar`?
@@ -101,4 +121,63 @@ export function getSelectionAffectedTable( selection: DocumentSelection ): Eleme
 	}
 
 	return selection.getFirstPosition()!.findAncestor( 'table' )!;
+}
+
+/**
+ * Groups table cells by their parent table.
+ *
+ * @internal
+ */
+export function groupCellsByTable( tableCells: Array<ModelElement> ): Map<ModelElement, Array<ModelElement>> {
+	const tableMap = new Map<ModelElement, Array<ModelElement>>();
+
+	for ( const tableCell of tableCells ) {
+		const table = tableCell.findAncestor( 'table' ) as ModelElement;
+
+		if ( !tableMap.has( table ) ) {
+			tableMap.set( table, [] );
+		}
+
+		tableMap.get( table )!.push( tableCell );
+	}
+
+	return tableMap;
+}
+
+/**
+ * Checks if all cells in a given row or column are header cells.
+ *
+ * @internal
+ */
+export function isEntireCellsLineHeader(
+	{
+		table,
+		row,
+		column
+	}: {
+		table: ModelElement;
+		row?: number;
+		column?: number;
+	}
+): boolean {
+	const tableWalker = new TableWalker( table, { row, column } );
+
+	for ( const { cell } of tableWalker ) {
+		const cellType = cell.getAttribute( 'tableCellType' ) as TableCellType;
+
+		if ( !isTableHeaderCellType( cellType ) ) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Checks whether the `tableCellType` attribute is enabled in the editor schema and the experimental flag is set.
+ *
+ * @internal
+ */
+export function isTableCellTypeEnabled( editor: Editor ): boolean {
+	return editor.model.schema.checkAttribute( 'tableCell', 'tableCellType' );
 }

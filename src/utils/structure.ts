@@ -1,17 +1,17 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/utils/structure
  */
 
-import type { Element, Node, Writer } from 'ckeditor5/src/engine.js';
+import type { ModelElement, ModelNode, ModelWriter, ViewElement } from '@ckeditor/ckeditor5-engine';
 
-import { default as TableWalker, type TableSlot } from '../tablewalker.js';
+import { TableWalker, type TableSlot } from '../tablewalker.js';
 import { createEmptyTableCell, updateNumericAttribute } from './common.js';
-import type TableUtils from '../tableutils.js';
+import { type TableUtils } from '../tableutils.js';
 
 type CellAttributes = {
 	rowspan?: number;
@@ -46,21 +46,32 @@ type CellAttributes = {
  *      ├───┼───┬───┤   ├───┤                  └───────┴───┘
  *   4  │ n │ o │ p │   │ q │
  *      └───┴───┴───┴───┴───┘
+ *
+ * @internal
  */
 export function cropTableToDimensions(
-	sourceTable: Element,
+	sourceTable: ModelElement,
 	cropDimensions: {
 		startRow: number;
 		startColumn: number;
 		endRow: number;
 		endColumn: number;
 	},
-	writer: Writer
-): Element {
+	writer: ModelWriter
+): ModelElement {
 	const { startRow, startColumn, endRow, endColumn } = cropDimensions;
 
-	// Create empty table with empty rows equal to crop height.
+	// Initialize the cropped table element.
 	const croppedTable = writer.createElement( 'table' );
+
+	// Copy table type attribute if present.
+	const sourceTableType = sourceTable.getAttribute( 'tableType' );
+
+	if ( sourceTableType ) {
+		writer.setAttribute( 'tableType', sourceTableType, croppedTable );
+	}
+
+	// Create empty table with empty rows equal to crop height.
 	const cropHeight = endRow - startRow + 1;
 
 	for ( let i = 0; i < cropHeight; i++ ) {
@@ -73,7 +84,7 @@ export function cropTableToDimensions(
 	for ( const { row: sourceRow, column: sourceColumn, cell: tableCell, isAnchor, cellAnchorRow, cellAnchorColumn } of tableMap ) {
 		// Row index in cropped table.
 		const rowInCroppedTable = sourceRow - startRow;
-		const row = croppedTable.getChild( rowInCroppedTable ) as Element;
+		const row = croppedTable.getChild( rowInCroppedTable ) as ModelElement;
 
 		// For empty slots: fill the gap with empty table cell.
 		if ( !isAnchor ) {
@@ -98,6 +109,9 @@ export function cropTableToDimensions(
 	// Adjust heading rows & columns in cropped table if crop selection includes headings parts.
 	addHeadingsToCroppedTable( croppedTable, sourceTable, startRow, startColumn, writer );
 
+	// Adjust footer rows in cropped table if crop selection includes footer rows.
+	addFootersToCroppedTable( croppedTable, sourceTable, startRow, endRow, writer );
+
 	return croppedTable;
 }
 
@@ -120,11 +134,12 @@ export function cropTableToDimensions(
  *
  * will return slot info for cells: "j", "f", "k".
  *
+ * @internal
  * @param table The table to check.
  * @param overlapRow The index of the row to check.
  * @param startRow row to start analysis. Use it when it is known that the cells above that row will not overlap. Default value is 0.
  */
-export function getVerticallyOverlappingCells( table: Element, overlapRow: number, startRow: number = 0 ): Array<TableSlot> {
+export function getVerticallyOverlappingCells( table: ModelElement, overlapRow: number, startRow: number = 0 ): Array<TableSlot> {
 	const cells: Array<TableSlot> = [];
 
 	const tableWalker = new TableWalker( table, { startRow, endRow: overlapRow - 1 } );
@@ -144,11 +159,12 @@ export function getVerticallyOverlappingCells( table: Element, overlapRow: numbe
 /**
  * Splits the table cell horizontally.
  *
+ * @internal
  * @returns Created table cell, if any were created.
  */
-export function splitHorizontally( tableCell: Element, splitRow: number, writer: Writer ): Element | null {
-	const tableRow = tableCell.parent as Node;
-	const table = tableRow.parent as Element;
+export function splitHorizontally( tableCell: ModelElement, splitRow: number, writer: ModelWriter ): ModelElement | null {
+	const tableRow = tableCell.parent as ModelNode;
+	const table = tableRow.parent as ModelElement;
 	const rowIndex = tableRow.index!;
 
 	const rowspan = parseInt( tableCell.getAttribute( 'rowspan' ) as string );
@@ -214,10 +230,11 @@ export function splitHorizontally( tableCell: Element, splitRow: number, writer:
  *
  * will return slot info for cells: "b", "e", "i".
  *
+ * @internal
  * @param table The table to check.
  * @param overlapColumn The index of the column to check.
  */
-export function getHorizontallyOverlappingCells( table: Element, overlapColumn: number ): Array<TableSlot> {
+export function getHorizontallyOverlappingCells( table: ModelElement, overlapColumn: number ): Array<TableSlot> {
 	const cellsToSplit = [];
 
 	const tableWalker = new TableWalker( table );
@@ -237,11 +254,12 @@ export function getHorizontallyOverlappingCells( table: Element, overlapColumn: 
 /**
  * Splits the table cell vertically.
  *
+ * @internal
  * @param columnIndex The table cell column index.
  * @param splitColumn The index of column to split cell on.
  * @returns Created table cell.
  */
-export function splitVertically( tableCell: Element, columnIndex: number, splitColumn: number, writer: Writer ): Element {
+export function splitVertically( tableCell: ModelElement, columnIndex: number, splitColumn: number, writer: ModelWriter ): ModelElement {
 	const colspan = parseInt( tableCell.getAttribute( 'colspan' ) as string );
 	const newColspan = splitColumn - columnIndex;
 
@@ -271,14 +289,16 @@ export function splitVertically( tableCell: Element, columnIndex: number, splitC
  *
  * If table cell width (or height) covers a column (or row) that is after a limit column (or row)
  * this method will trim "colspan" (or "rowspan") attribute so the table cell will fit in a defined limits.
+ *
+ * @internal
  */
 export function trimTableCellIfNeeded(
-	tableCell: Element,
+	tableCell: ModelElement,
 	cellRow: number,
 	cellColumn: number,
 	limitRow: number,
 	limitColumn: number,
-	writer: Writer
+	writer: ModelWriter
 ): void {
 	const colspan = parseInt( tableCell.getAttribute( 'colspan' ) as string || '1' );
 	const rowspan = parseInt( tableCell.getAttribute( 'rowspan' ) as string || '1' );
@@ -303,7 +323,13 @@ export function trimTableCellIfNeeded(
 /**
  * Sets proper heading attributes to a cropped table.
  */
-function addHeadingsToCroppedTable( croppedTable: Element, sourceTable: Element, startRow: number, startColumn: number, writer: Writer ) {
+function addHeadingsToCroppedTable(
+	croppedTable: ModelElement,
+	sourceTable: ModelElement,
+	startRow: number,
+	startColumn: number,
+	writer: ModelWriter
+) {
 	const headingRows = parseInt( sourceTable.getAttribute( 'headingRows' ) as string || '0' );
 
 	if ( headingRows > 0 ) {
@@ -317,6 +343,36 @@ function addHeadingsToCroppedTable( croppedTable: Element, sourceTable: Element,
 		const headingColumnsInCrop = headingColumns - startColumn;
 		updateNumericAttribute( 'headingColumns', headingColumnsInCrop, croppedTable, writer, 0 );
 	}
+}
+
+/**
+ * Sets footer row attributes to a cropped table.
+ */
+function addFootersToCroppedTable(
+	croppedTable: ModelElement,
+	sourceTable: ModelElement,
+	startRow: number,
+	endRow: number,
+	writer: ModelWriter
+) {
+	const maxRows = Array
+		.from( sourceTable.getChildren() )
+		.reduce( ( count, row ) => row.is( 'element', 'tableRow' ) ? count + 1 : count, 0 );
+
+	const footerRows = parseInt( sourceTable.getAttribute( 'footerRows' ) as string || '0' );
+	const footerIndex = maxRows - footerRows;
+
+	if ( footerRows < 1 ) {
+		return;
+	}
+
+	let footerRowsInCrop = 0;
+
+	if ( endRow >= footerIndex ) {
+		footerRowsInCrop = endRow - Math.max( footerIndex, startRow ) + 1;
+	}
+
+	updateNumericAttribute( 'footerRows', footerRowsInCrop, croppedTable, writer, 0 );
 }
 
 /**
@@ -341,7 +397,7 @@ function addHeadingsToCroppedTable( croppedTable: Element, sourceTable: Element,
  * @internal
  * @returns True if removed some columns.
  */
-export function removeEmptyColumns( table: Element, tableUtils: TableUtils ): boolean {
+export function removeEmptyColumns( table: ModelElement, tableUtils: TableUtils ): boolean {
 	const width = tableUtils.getColumns( table );
 	const columnsMap = new Array( width ).fill( 0 );
 
@@ -395,12 +451,12 @@ export function removeEmptyColumns( table: Element, tableUtils: TableUtils ): bo
  * @internal
  * @returns True if removed some rows.
  */
-export function removeEmptyRows( table: Element, tableUtils: TableUtils ): boolean {
+export function removeEmptyRows( table: ModelElement, tableUtils: TableUtils ): boolean {
 	const emptyRows = [];
 	const tableRowCount = tableUtils.getRows( table );
 
 	for ( let rowIndex = 0; rowIndex < tableRowCount; rowIndex++ ) {
-		const tableRow = table.getChild( rowIndex ) as Element;
+		const tableRow = table.getChild( rowIndex ) as ModelElement;
 
 		if ( tableRow.isEmpty ) {
 			emptyRows.push( rowIndex );
@@ -444,7 +500,7 @@ export function removeEmptyRows( table: Element, tableUtils: TableUtils ): boole
  *
  * @internal
  */
-export function removeEmptyRowsColumns( table: Element, tableUtils: TableUtils ): void {
+export function removeEmptyRowsColumns( table: ModelElement, tableUtils: TableUtils ): void {
 	const removedColumns = removeEmptyColumns( table, tableUtils );
 
 	// If there was some columns removed then cleaning empty rows was already triggered.
@@ -469,10 +525,11 @@ export function removeEmptyRowsColumns( table: Element, tableUtils: TableUtils )
  *      3 |   |   |   |   |
  *        +---+---+---+---+
  *
+ * @internal
  * @returns Adjusted last row index.
  */
 export function adjustLastRowIndex(
-	table: Element,
+	table: ModelElement,
 	dimensions: {
 		firstRow: number;
 		firstColumn: number;
@@ -517,10 +574,11 @@ export function adjustLastRowIndex(
  *               ^
  *              last column, each cell has colspan = 2, so we need to return 3, not 2
  *
+ * @internal
  * @returns Adjusted last column index.
  */
 export function adjustLastColumnIndex(
-	table: Element,
+	table: ModelElement,
 	dimensions: {
 		firstRow: number;
 		firstColumn: number;
@@ -544,4 +602,15 @@ export function adjustLastColumnIndex(
 	// Otherwise get any cell's colspan and adjust the last column index.
 	const colspanAdjustment = lastColumnMap[ 0 ].cellWidth - 1;
 	return dimensions.lastColumn + colspanAdjustment;
+}
+
+/**
+ * Get view `<table>` element from the wrapper.
+ */
+export function getViewTableFromWrapper( wrapperView: ViewElement ): ViewElement | undefined {
+	for ( const wrapperChild of wrapperView.getChildren() ) {
+		if ( wrapperChild.is( 'element', 'table' ) ) {
+			return wrapperChild;
+		}
+	}
 }

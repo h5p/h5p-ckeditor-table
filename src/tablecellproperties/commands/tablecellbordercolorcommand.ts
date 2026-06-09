@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellproperties/commands/tablecellbordercolorcommand
  */
 
-import type { Element } from 'ckeditor5/src/engine.js';
-import type { Editor } from 'ckeditor5/src/core.js';
+import type { ModelElement } from '@ckeditor/ckeditor5-engine';
+import type { Editor } from '@ckeditor/ckeditor5-core';
 
-import TableCellPropertyCommand from './tablecellpropertycommand.js';
+import { TableCellPropertyCommand } from './tablecellpropertycommand.js';
 import { getSingleValue } from '../../utils/table-properties.js';
 
 /**
@@ -27,7 +27,7 @@ import { getSingleValue } from '../../utils/table-properties.js';
  * } );
  * ```
  */
-export default class TableCellBorderColorCommand extends TableCellPropertyCommand {
+export class TableCellBorderColorCommand extends TableCellPropertyCommand {
 	/**
 	 * Creates a new `TableCellBorderColorCommand` instance.
 	 *
@@ -41,7 +41,7 @@ export default class TableCellBorderColorCommand extends TableCellPropertyComman
 	/**
 	 * @inheritDoc
 	 */
-	protected override _getAttribute( tableCell: Element ): unknown {
+	protected override _getAttribute( tableCell: ModelElement ): unknown {
 		if ( !tableCell ) {
 			return;
 		}

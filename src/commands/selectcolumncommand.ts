@@ -1,17 +1,17 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/commands/selectcolumncommand
  */
 
-import { Command, type Editor } from 'ckeditor5/src/core.js';
-import type { Range } from 'ckeditor5/src/engine.js';
-import type TableUtils from '../tableutils.js';
+import { Command, type Editor } from '@ckeditor/ckeditor5-core';
+import type { ModelRange } from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../tableutils.js';
 
-import TableWalker from '../tablewalker.js';
+import { TableWalker } from '../tablewalker.js';
 
 /**
  * The select column command.
@@ -24,7 +24,7 @@ import TableWalker from '../tablewalker.js';
  * editor.execute( 'selectTableColumn' );
  * ```
  */
-export default class SelectColumnCommand extends Command {
+export class SelectColumnCommand extends Command {
 	/**
 	 * @inheritDoc
 	 */
@@ -62,7 +62,7 @@ export default class SelectColumnCommand extends Command {
 		const startColumn = Math.min( startLocation.column, endLocation.column );
 		const endColumn = Math.max( startLocation.column, endLocation.column );
 
-		const rangesToSelect: Array<Range> = [];
+		const rangesToSelect: Array<ModelRange> = [];
 
 		for ( const cellInfo of new TableWalker( table, { startColumn, endColumn } ) ) {
 			rangesToSelect.push( model.createRangeOn( cellInfo.cell ) );

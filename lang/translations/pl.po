@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
+# Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
 #
 # Want to contribute to this file? Submit your changes via a GitHub Pull Request.
 #
@@ -139,10 +139,6 @@ msgctxt "The label for the group of toolbars that allows configuring the text al
 msgid "Table cell text alignment"
 msgstr "Wyrównanie tekstu komórki tabeli"
 
-msgctxt "The label for the toolbar that allows configuring the alignment of a table."
-msgid "Alignment"
-msgstr "Wyrównanie"
-
 msgctxt "The label used by assistive technologies describing a toolbar that allows configuring the horizontal text alignment in a table cell."
 msgid "Horizontal text alignment toolbar"
 msgstr "Pasek narzędzi wyrównania tekstu w poziomie"
@@ -223,18 +219,6 @@ msgctxt "The label used by assistive technologies describing a button that align
 msgid "Align cell text to the bottom"
 msgstr "Wyrównaj tekst w komórce do dołu"
 
-msgctxt "The label used by assistive technologies describing a button that aligns the table to the left."
-msgid "Align table to the left"
-msgstr "Wyrównaj tabelę do lewej"
-
-msgctxt "The label used by assistive technologies describing a button that centers the table."
-msgid "Center table"
-msgstr "Wyrównaj tabelę do środka"
-
-msgctxt "The label used by assistive technologies describing a button that aligns the table to the right."
-msgid "Align table to the right"
-msgstr "Wyrównaj tabelę do prawej"
-
 msgctxt "The localized error string that can be displayed next to color (background, border) fields that have an invalid value"
 msgid "The color is invalid. Try \"#FF0000\" or \"rgb(255,0,0)\" or \"red\"."
 msgstr "Kolor jest niepoprawny. Spróbuj wpisać \"#FF0000\", \"rgb(255,0,0)\" lub \"red\"."
@@ -270,3 +254,79 @@ msgstr "Umożliwia poruszanie się po tabeli"
 msgctxt "The accessible label of the menu bar button that displays a user interface to insert a table into editor content."
 msgid "Table"
 msgstr "Tabela"
+
+msgctxt "Label for the insert table layout toolbar button."
+msgid "Insert table layout"
+msgstr "Wstaw layout tabeli"
+
+msgctxt "The accessible label used in the table layout insert UI element."
+msgid "Table layout"
+msgstr "Layout tabeli"
+
+msgctxt "The accessible label of the layout table type dropdown button."
+msgid "Layout table"
+msgstr "Tabela layoutu"
+
+msgctxt "The accessible label of the content table type dropdown button."
+msgid "Content table"
+msgstr "Tabela zawartości"
+
+msgctxt "The accessible label of the table balloon button that displays a user interface to choose table type."
+msgid "Choose table type"
+msgstr "Wybierz typ tabeli"
+
+msgctxt "The accessible label of the table type toolbar button."
+msgid "Table type"
+msgstr "Typ tabeli"
+
+msgctxt "The accessible label of dropdown list that displays a user interface to choose table type."
+msgid "Table type options"
+msgstr "Opcje typu tabeli"
+
+msgctxt "The label for the toolbar that allows configuring the alignment of a table."
+msgid "Table Alignment"
+msgstr "Wyrównanie tabeli"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the left as an inline element, allowing text to wrap around it."
+msgid "Align table to the left with text wrapping"
+msgstr "Wyrównaj tabelę do lewej z zawijaniem tekstu"
+
+msgctxt "The label used by assistive technologies describing a button that centers the table as a block element with no text wrapping."
+msgid "Center table with no text wrapping"
+msgstr "Wyśrodkuj tabelę bez zawijania tekstu"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the right as an inline element, allowing text to wrap around it."
+msgid "Align table to the right with text wrapping"
+msgstr "Wyrównaj tabelę do prawej z zawijaniem tekstu"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the left as a block element with no text wrapping."
+msgid "Align table to the left with no text wrapping"
+msgstr "Wyrównaj tabelę do lewej bez zawijania tekstu"
+
+msgctxt "The label used by assistive technologies describing a button that aligns the table to the right as a block element with no text wrapping."
+msgid "Align table to the right with no text wrapping"
+msgstr "Wyrównaj tabelę do prawej bez zawijania tekstu"
+
+msgctxt "The label for the dropdown that allows configuring the type of a table cell (data or header)."
+msgid "Cell type"
+msgstr "Typ komórki"
+
+msgctxt "The label for the dropdown option for a data table cell."
+msgid "Data cell"
+msgstr "Komórka danych"
+
+msgctxt "The label for the dropdown option for a header table cell."
+msgid "Header cell"
+msgstr "Komórka nagłówka"
+
+msgctxt "Label for the set/unset table footer row button."
+msgid "Footer row"
+msgstr "Wiersz stopki"
+
+msgctxt "The label for the dropdown option for a header table cell that represents a column header."
+msgid "Column header"
+msgstr "Nagłówek kolumny"
+
+msgctxt "The label for the dropdown option for a header table cell that represents a row header."
+msgid "Row header"
+msgstr "Nagłówek wiersza"

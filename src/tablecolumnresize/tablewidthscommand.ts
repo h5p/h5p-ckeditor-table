@@ -1,22 +1,22 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecolumnresize/tablewidthscommand
  */
 
-import type { Element } from 'ckeditor5/src/engine.js';
-import { Command } from 'ckeditor5/src/core.js';
+import type { ModelElement } from '@ckeditor/ckeditor5-engine';
+import { Command } from '@ckeditor/ckeditor5-core';
 import { getTableWidthInEms, normalizeColumnWidths } from './utils.js';
-import TableWalker from './../tablewalker.js';
+import TableWalker from '../tablewalker.js';
 
 /**
  * Command used by the {@link module:table/tablecolumnresize~TableColumnResize Table column resize feature} that
  * updates the width of the whole table as well as its individual columns.
  */
-export default class TableWidthsCommand extends Command {
+export class TableWidthsCommand extends Command {
 	/**
 	 * @inheritDoc
 	 */
@@ -116,5 +116,5 @@ export interface TableWidthsCommandOptions {
 	/**
 	 * The table that is having the columns resized.
 	 */
-	table?: Element;
+	table?: ModelElement;
 }

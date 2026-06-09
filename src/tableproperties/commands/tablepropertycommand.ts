@@ -1,20 +1,20 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableproperties/commands/tablepropertycommand
  */
 
-import type { Batch, Element } from 'ckeditor5/src/engine.js';
-import { Command, type Editor } from 'ckeditor5/src/core.js';
+import type { Batch, ModelElement } from '@ckeditor/ckeditor5-engine';
+import { Command, type Editor } from '@ckeditor/ckeditor5-core';
 import { getSelectionAffectedTable } from '../../utils/common.js';
 
 export interface TablePropertyCommandExecuteOptions {
 	batch?: Batch;
 	columnWidths?: string;
-	table?: Element;
+	table?: ModelElement;
 	tableWidth?: string;
 	value?: string;
 }
@@ -24,7 +24,7 @@ export interface TablePropertyCommandExecuteOptions {
  *
  * This command is a base command for other table property commands.
  */
-export default class TablePropertyCommand extends Command {
+export class TablePropertyCommand extends Command {
 	/**
 	 * The attribute that will be set by the command.
 	 */
@@ -32,8 +32,20 @@ export default class TablePropertyCommand extends Command {
 
 	/**
 	 * The default value for the attribute.
+	 *
+	 * @readonly
 	 */
-	protected readonly _defaultValue: string | undefined;
+	protected _defaultValue: string | undefined;
+
+	/**
+	 * The default value for the attribute for the content table.
+	 */
+	private readonly _defaultContentTableValue: string | undefined;
+
+	/**
+	 * The default value for the attribute for the layout table.
+	 */
+	private readonly _defaultLayoutTableValue: string | undefined;
 
 	/**
 	 * Creates a new `TablePropertyCommand` instance.
@@ -46,7 +58,8 @@ export default class TablePropertyCommand extends Command {
 		super( editor );
 
 		this.attributeName = attributeName;
-		this._defaultValue = defaultValue;
+		this._defaultContentTableValue = defaultValue;
+		this._defaultLayoutTableValue = attributeName === 'tableBorderStyle' ? 'none' : undefined;
 	}
 
 	/**
@@ -57,6 +70,10 @@ export default class TablePropertyCommand extends Command {
 		const selection = editor.model.document.selection;
 
 		const table = getSelectionAffectedTable( selection );
+
+		this._defaultValue = !table || table.getAttribute( 'tableType' ) !== 'layout' ?
+			this._defaultContentTableValue :
+			this._defaultLayoutTableValue;
 
 		this.isEnabled = !!table;
 		this.value = this._getValue( table );
@@ -92,7 +109,7 @@ export default class TablePropertyCommand extends Command {
 	/**
 	 * Returns the attribute value for a table.
 	 */
-	protected _getValue( table: Element ): unknown {
+	protected _getValue( table: ModelElement ): unknown {
 		if ( !table ) {
 			return;
 		}

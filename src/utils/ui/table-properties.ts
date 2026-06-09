@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
@@ -9,7 +9,7 @@
 
 import {
 	ButtonView,
-	ViewModel,
+	UIModel,
 	type ColorOption,
 	type LabeledFieldView,
 	type ListDropdownItemDefinition,
@@ -17,15 +17,15 @@ import {
 	type ToolbarView,
 	type View,
 	type ColorPickerConfig
-} from 'ckeditor5/src/ui.js';
+} from '@ckeditor/ckeditor5-ui';
 
-import { Collection, type LocaleTranslate } from 'ckeditor5/src/utils.js';
-import { isColor, isLength, isPercentage } from 'ckeditor5/src/engine.js';
+import { Collection, type LocaleTranslate } from '@ckeditor/ckeditor5-utils';
+import { isColorStyleValue, isLengthStyleValue, isPercentageStyleValue } from '@ckeditor/ckeditor5-engine';
 
-import type TableCellPropertiesView from '../../tablecellproperties/ui/tablecellpropertiesview.js';
-import type TablePropertiesView from '../../tableproperties/ui/tablepropertiesview.js';
+import { type TableCellPropertiesView } from '../../tablecellproperties/ui/tablecellpropertiesview.js';
+import { type TablePropertiesView } from '../../tableproperties/ui/tablepropertiesview.js';
 
-import ColorInputView from '../../ui/colorinputview.js';
+import { ColorInputView } from '../../ui/colorinputview.js';
 
 const isEmpty = ( val: string ) => val === '';
 
@@ -34,6 +34,7 @@ const isEmpty = ( val: string ) => val === '';
  * labels. Used by {@link module:table/tablecellproperties/ui/tablecellpropertiesview~TableCellPropertiesView}
  * and {@link module:table/tableproperties/ui/tablepropertiesview~TablePropertiesView}.
  *
+ * @internal
  * @param t The "t" function provided by the editor that is used to localize strings.
  */
 export function getBorderStyleLabels( t: LocaleTranslate ): Record<string, string> {
@@ -55,6 +56,7 @@ export function getBorderStyleLabels( t: LocaleTranslate ): Record<string, strin
  * Returns a localized error string that can be displayed next to color (background, border)
  * fields that have an invalid value.
  *
+ * @internal
  * @param t The "t" function provided by the editor that is used to localize strings.
  */
 export function getLocalizedColorErrorText( t: LocaleTranslate ): string {
@@ -65,6 +67,7 @@ export function getLocalizedColorErrorText( t: LocaleTranslate ): string {
  * Returns a localized error string that can be displayed next to length (padding, border width)
  * fields that have an invalid value.
  *
+ * @internal
  * @param t The "t" function provided by the editor that is used to localize strings.
  */
 export function getLocalizedLengthErrorText( t: LocaleTranslate ): string {
@@ -75,42 +78,49 @@ export function getLocalizedLengthErrorText( t: LocaleTranslate ): string {
  * Returns `true` when the passed value is an empty string or a valid CSS color expression.
  * Otherwise, `false` is returned.
  *
- * See {@link module:engine/view/styles/utils~isColor}.
+ * See {@link module:engine/view/styles/utils~isColorStyleValue}.
+ *
+ * @internal
  */
 export function colorFieldValidator( value: string ): boolean {
 	value = value.trim().toLowerCase();
 
-	return isEmpty( value ) || isColor( value );
+	return isEmpty( value ) || isColorStyleValue( value );
 }
 
 /**
  * Returns `true` when the passed value is an empty string, a number without a unit or a valid CSS length expression.
  * Otherwise, `false` is returned.
  *
- * See {@link module:engine/view/styles/utils~isLength}.
- * See {@link module:engine/view/styles/utils~isPercentage}.
+ * See {@link module:engine/view/styles/utils~isLengthStyleValue}.
+ * See {@link module:engine/view/styles/utils~isPercentageStyleValue}.
+ *
+ * @internal
  */
 export function lengthFieldValidator( value: string ): boolean {
 	value = value.trim();
 
-	return isEmpty( value ) || isNumberString( value ) || isLength( value ) || isPercentage( value );
+	return isEmpty( value ) || isNumberString( value ) || isLengthStyleValue( value ) || isPercentageStyleValue( value );
 }
 
 /**
  * Returns `true` when the passed value is an empty string, a number without a unit or a valid CSS length expression.
  * Otherwise, `false` is returned.
  *
- * See {@link module:engine/view/styles/utils~isLength}.
+ * See {@link module:engine/view/styles/utils~isLengthStyleValue}.
+ *
+ * @internal
  */
 export function lineWidthFieldValidator( value: string ): boolean {
 	value = value.trim();
 
-	return isEmpty( value ) || isNumberString( value ) || isLength( value );
+	return isEmpty( value ) || isNumberString( value ) || isLengthStyleValue( value );
 }
 
 /**
  * Generates item definitions for a UI dropdown that allows changing the border style of a table or a table cell.
  *
+ * @internal
  * @param defaultStyle The default border.
  */
 export function getBorderStyleDefinitions(
@@ -123,7 +133,7 @@ export function getBorderStyleDefinitions(
 	for ( const style in styleLabels ) {
 		const definition: ListDropdownItemDefinition = {
 			type: 'button',
-			model: new ViewModel( {
+			model: new UIModel( {
 				_borderStyleValue: style,
 				label: styleLabels[ style ],
 				role: 'menuitemradio',
@@ -158,7 +168,15 @@ export function getBorderStyleDefinitions(
  * * have some icons,
  * * set a certain UI view property value upon execution.
  *
- * @param nameToValue A function that maps a button name to a value. By default names are the same as values.
+ * @internal
+ * @param options Configuration options
+ * @param options.view The view that has the observable property.
+ * @param options.icons Object with button icons.
+ * @param options.toolbar The toolbar to fill with buttons.
+ * @param options.labels Object with button labels.
+ * @param options.propertyName The name of the observable property in the view.
+ * @param options.nameToValue A function that maps a button name to a value. By default names are the same as values.
+ * @param options.defaultValue Default value for the property.
  */
 export function fillToolbar<TView extends View, TPropertyName extends keyof TView>(
 	options: {
@@ -176,6 +194,8 @@ export function fillToolbar<TView extends View, TPropertyName extends keyof TVie
 		const button = new ButtonView( view.locale );
 
 		button.set( {
+			role: 'radio',
+			isToggleable: true,
 			label: labels[ name ],
 			icon: icons[ name ],
 			tooltip: labels[ name ]
@@ -197,7 +217,12 @@ export function fillToolbar<TView extends View, TPropertyName extends keyof TVie
 		} );
 
 		button.on( 'execute', () => {
-			view[ propertyName ] = buttonValue as any;
+			// Allow toggling alignment if there is no default value specified (especially for layout tables).
+			if ( !defaultValue && buttonValue && view[ propertyName ] === buttonValue ) {
+				view[ propertyName ] = undefined as any;
+			} else {
+				view[ propertyName ] = buttonValue as any;
+			}
 		} );
 
 		toolbar.items.add( button );
@@ -277,6 +302,8 @@ export function fillToolbar<TView extends View, TPropertyName extends keyof TVie
  *   }
  * ];
  * ```
+ *
+ * @internal
  */
 export const defaultColors: Array<ColorOption> = [
 	{

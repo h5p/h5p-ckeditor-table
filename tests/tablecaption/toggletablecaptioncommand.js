@@ -1,18 +1,18 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+import { ModelTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { _setModelData, _getModelData } from '@ckeditor/ckeditor5-engine';
 
-import TableSelection from '../../src/tableselection.js';
-import TableEditing from '../../src/tableediting.js';
+import { TableSelection } from '../../src/tableselection.js';
+import { TableEditing } from '../../src/tableediting.js';
 import { modelTable } from '../_utils/utils.js';
 
-import ToggleTableCaptionCommand from '../../src/tablecaption/toggletablecaptioncommand.js';
-import TableCaptionEditing from '../../src/tablecaption/tablecaptionediting.js';
+import { ToggleTableCaptionCommand } from '../../src/tablecaption/toggletablecaptioncommand.js';
+import { TableCaptionEditing } from '../../src/tablecaption/tablecaptionediting.js';
 import { BoldEditing } from '@ckeditor/ckeditor5-basic-styles';
 
 describe( 'ToggleTableCaptionCommand', () => {
@@ -36,17 +36,17 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 	describe( 'isEnabled', () => {
 		it( 'should be false if wrong node', () => {
-			setData( model, '<paragraph>foo[]</paragraph>' );
+			_setModelData( model, '<paragraph>foo[]</paragraph>' );
 			expect( command.isEnabled ).to.be.false;
 		} );
 
 		it( 'should be true if in a table', () => {
-			setData( model, modelTable( [ [ '[]' ] ] ) );
+			_setModelData( model, modelTable( [ [ '[]' ] ] ) );
 			expect( command.isEnabled ).to.be.true;
 		} );
 
 		it( 'should be true if on a table', () => {
-			setData( model,
+			_setModelData( model,
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -57,18 +57,26 @@ describe( 'ToggleTableCaptionCommand', () => {
 			);
 			expect( command.isEnabled ).to.be.true;
 		} );
+
+		it( 'should be false if it is in a table that does not allow captions', () => {
+			editor.model.schema.extend( 'table', { disallowChildren: 'caption' } );
+
+			_setModelData( model, modelTable( [ [ '[]' ] ] ) );
+
+			expect( command.isEnabled ).to.be.false;
+		} );
 	} );
 
 	describe( 'execute()', () => {
 		it( 'should insert caption while the cell\'s content is focused', () => {
-			setData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '11[]', '12' ],
 				[ '21', '22' ]
 			] ) );
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -92,7 +100,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should hide caption while the cell\'s content is focused', () => {
-			setData( model,
+			_setModelData( model,
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -116,7 +124,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -139,7 +147,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should insert caption while the table is focused', () => {
-			setData( model,
+			_setModelData( model,
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -151,7 +159,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -164,7 +172,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should hide caption while the table is focused', () => {
-			setData( model,
+			_setModelData( model,
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -177,7 +185,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -189,7 +197,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should insert caption in given table while the table is focused and move focus to caption', () => {
-			setData( model,
+			_setModelData( model,
 				'[<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -201,7 +209,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute( { focusCaptionOnShow: true } );
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -214,7 +222,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should keep caption content even when caption is hidden', () => {
-			setData( model,
+			_setModelData( model,
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -227,7 +235,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -239,7 +247,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -252,7 +260,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 		} );
 
 		it( 'should overwrite caption with an empty one', () => {
-			setData( model,
+			_setModelData( model,
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -266,7 +274,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 			// Hide the caption.
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +
@@ -291,7 +299,7 @@ describe( 'ToggleTableCaptionCommand', () => {
 			command.execute();
 			command.execute();
 
-			expect( getData( model ) ).to.equalMarkup(
+			expect( _getModelData( model ) ).to.equalMarkup(
 				'<table>' +
 					'<tableRow>' +
 						'<tableCell>' +

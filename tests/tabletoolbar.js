@@ -1,25 +1,20 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* global document */
-
-import ClassicTestEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
-import TableToolbar from '../src/tabletoolbar.js';
-import Table from '../src/table.js';
-import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
-import Plugin from '@ckeditor/ckeditor5-core/src/plugin.js';
-import ButtonView from '@ckeditor/ckeditor5-ui/src/button/buttonview.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import View from '@ckeditor/ckeditor5-ui/src/view.js';
-import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import WidgetToolbarRepository from '@ckeditor/ckeditor5-widget/src/widgettoolbarrepository.js';
-import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
-import ImageToolbar from '@ckeditor/ckeditor5-image/src/imagetoolbar.js';
-import Image from '@ckeditor/ckeditor5-image/src/image.js';
-import ImageStyle from '@ckeditor/ckeditor5-image/src/imagestyle.js';
-import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
+import { ClassicEditor } from '@ckeditor/ckeditor5-editor-classic';
+import { TableToolbar } from '../src/tabletoolbar.js';
+import { Table } from '../src/table.js';
+import { global } from '@ckeditor/ckeditor5-utils';
+import { Plugin } from '@ckeditor/ckeditor5-core';
+import { ButtonView, View } from '@ckeditor/ckeditor5-ui';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { _setModelData } from '@ckeditor/ckeditor5-engine';
+import { WidgetToolbarRepository } from '@ckeditor/ckeditor5-widget';
+import { testUtils } from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
+import { ImageToolbar, Image, ImageStyle } from '@ckeditor/ckeditor5-image';
+import { ClipboardPipeline } from '@ckeditor/ckeditor5-clipboard';
 
 describe( 'TableToolbar', () => {
 	testUtils.createSinonSandbox();
@@ -39,7 +34,7 @@ describe( 'TableToolbar', () => {
 			editorElement = global.document.createElement( 'div' );
 			global.document.body.appendChild( editorElement );
 
-			return ClassicTestEditor
+			return ClassicEditor
 				.create( editorElement, {
 					plugins: [ Paragraph, Image, ImageStyle, ImageToolbar, Table, TableToolbar, FakeButton, ClipboardPipeline ],
 					image: {
@@ -73,7 +68,7 @@ describe( 'TableToolbar', () => {
 			const editorElement = global.document.createElement( 'div' );
 			global.document.body.appendChild( editorElement );
 
-			return ClassicTestEditor.create( editorElement, {
+			return ClassicEditor.create( editorElement, {
 				plugins: [ TableToolbar, ClipboardPipeline ]
 			} )
 				.then( editor => {
@@ -89,7 +84,7 @@ describe( 'TableToolbar', () => {
 			it( 'should use the config.table.contenToolbar to create items', () => {
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
 
 				expect( toolbar.items ).to.have.length( 1 );
 				expect( toolbar.items.get( 0 ).label ).to.equal( 'fake button' );
@@ -100,7 +95,7 @@ describe( 'TableToolbar', () => {
 
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
 
 				sinon.assert.calledWithMatch( spy, sinon.match( ( { balloonClassName, view } ) => {
 					return view === toolbar && balloonClassName === 'ck-toolbar-container';
@@ -120,7 +115,7 @@ describe( 'TableToolbar', () => {
 			it( 'should show the toolbar when the editor gains focus and the table is selected', () => {
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
 
 				editor.ui.focusTracker.isFocused = false;
 				expect( balloon.visibleView ).to.be.null;
@@ -132,7 +127,7 @@ describe( 'TableToolbar', () => {
 			it( 'should hide the toolbar when the editor loses focus and the table is selected', () => {
 				editor.ui.focusTracker.isFocused = false;
 
-				setData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
 
 				editor.ui.focusTracker.isFocused = true;
 				expect( balloon.visibleView ).to.equal( toolbar );
@@ -148,13 +143,13 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should not show the toolbar on ui#update when the table is selected', () => {
-				setData( model, '<paragraph>foo</paragraph>[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '<paragraph>foo</paragraph>[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 
 				expect( balloon.visibleView ).to.be.null;
 			} );
 
 			it( 'should show the toolbar on ui#update when the table content is selected', () => {
-				setData(
+				_setModelData(
 					model,
 					'<paragraph>[foo]</paragraph><table><tableRow><tableCell><paragraph>bar</paragraph></tableCell></tableRow></table>'
 				);
@@ -181,7 +176,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should not show the toolbar on ui#update when the image inside table is selected', () => {
-				setData(
+				_setModelData(
 					model,
 					'<paragraph>[foo]</paragraph>' +
 					'<table><tableRow><tableCell><paragraph>foo</paragraph><imageBlock src=""></imageBlock></tableCell></tableRow></table>'
@@ -211,7 +206,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should not engage when the toolbar is in the balloon yet invisible', () => {
-				setData( model, '<table><tableRow><tableCell><paragraph>x[y]z</paragraph></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell><paragraph>x[y]z</paragraph></tableCell></tableRow></table>' );
 
 				expect( balloon.visibleView ).to.equal( toolbar );
 
@@ -234,7 +229,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should hide the toolbar on render if the table is de–selected', () => {
-				setData(
+				_setModelData(
 					model,
 					'<paragraph>foo</paragraph><table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>'
 				);
@@ -265,7 +260,7 @@ describe( 'TableToolbar', () => {
 			element = document.createElement( 'div' );
 			document.body.appendChild( element );
 
-			return ClassicTestEditor.create( element, {
+			return ClassicEditor.create( element, {
 				plugins: [ Paragraph, Table, TableToolbar, FakeButton, ClipboardPipeline ],
 				table: {
 					tableToolbar: [ 'fake_button' ]
@@ -289,7 +284,7 @@ describe( 'TableToolbar', () => {
 				const editorElement = global.document.createElement( 'div' );
 				global.document.body.appendChild( editorElement );
 
-				return ClassicTestEditor.create( editorElement, {
+				return ClassicEditor.create( editorElement, {
 					plugins: [ TableToolbar ]
 				} )
 					.then( editor => {
@@ -304,7 +299,7 @@ describe( 'TableToolbar', () => {
 			it( 'should use the config.table.tableWidget to create items', () => {
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 
 				expect( toolbar.items ).to.have.length( 1 );
 				expect( toolbar.items.get( 0 ).label ).to.equal( 'fake button' );
@@ -315,7 +310,7 @@ describe( 'TableToolbar', () => {
 
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 
 				sinon.assert.calledWithMatch( spy, sinon.match( ( { balloonClassName, view } ) => {
 					return view === toolbar && balloonClassName === 'ck-toolbar-container';
@@ -327,7 +322,7 @@ describe( 'TableToolbar', () => {
 			it( 'should show the toolbar when the editor gains focus and the table is selected', () => {
 				editor.ui.focusTracker.isFocused = true;
 
-				setData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 
 				editor.ui.focusTracker.isFocused = false;
 				expect( balloon.visibleView ).to.be.null;
@@ -339,7 +334,7 @@ describe( 'TableToolbar', () => {
 			it( 'should hide the toolbar when the editor loses focus and the table is selected', () => {
 				editor.ui.focusTracker.isFocused = false;
 
-				setData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 
 				editor.ui.focusTracker.isFocused = true;
 				expect( balloon.visibleView ).to.equal( toolbar );
@@ -355,7 +350,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should show the toolbar on ui#update when the table widget is selected', () => {
-				setData( editor.model, '<paragraph>[foo]</paragraph><table><tableRow><tableCell></tableCell></tableRow></table>' );
+				_setModelData( editor.model, '<paragraph>[foo]</paragraph><table><tableRow><tableCell></tableCell></tableRow></table>' );
 
 				expect( balloon.visibleView ).to.be.null;
 
@@ -377,7 +372,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should not show the toolbar on ui#update when the selection is inside a table cell', () => {
-				setData( editor.model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
+				_setModelData( editor.model, '<table><tableRow><tableCell><paragraph>[]</paragraph></tableCell></tableRow></table>' );
 
 				expect( balloon.visibleView ).to.be.null;
 
@@ -387,7 +382,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should not engage when the toolbar is in the balloon yet invisible', () => {
-				setData( model, '<table><tableRow><tableCell></tableCell></tableRow></table>' );
+				_setModelData( model, '<table><tableRow><tableCell></tableCell></tableRow></table>' );
 
 				expect( balloon.visibleView ).to.equal( toolbar );
 
@@ -409,7 +404,7 @@ describe( 'TableToolbar', () => {
 			} );
 
 			it( 'should hide the toolbar on ui#update if the table is de–selected', () => {
-				setData( model, '<paragraph>foo</paragraph>[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
+				_setModelData( model, '<paragraph>foo</paragraph>[<table><tableRow><tableCell></tableCell></tableRow></table>]' );
 				expect( balloon.visibleView ).to.equal( toolbar );
 
 				model.change( writer => {

@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/commands/selectrowcommand
  */
 
-import { Command, type Editor } from 'ckeditor5/src/core.js';
-import type { Range, Element } from 'ckeditor5/src/engine.js';
-import type TableUtils from '../tableutils.js';
+import { Command, type Editor } from '@ckeditor/ckeditor5-core';
+import type { ModelRange, ModelElement } from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../tableutils.js';
 
 /**
  * The select row command.
@@ -22,7 +22,7 @@ import type TableUtils from '../tableutils.js';
  * editor.execute( 'selectTableRow' );
  * ```
  */
-export default class SelectRowCommand extends Command {
+export class SelectRowCommand extends Command {
 	/**
 	 * @inheritDoc
 	 */
@@ -53,10 +53,10 @@ export default class SelectRowCommand extends Command {
 		const rowIndexes = tableUtils.getRowIndexes( referenceCells );
 
 		const table = referenceCells[ 0 ].findAncestor( 'table' )!;
-		const rangesToSelect: Array<Range> = [];
+		const rangesToSelect: Array<ModelRange> = [];
 
 		for ( let rowIndex = rowIndexes.first; rowIndex <= rowIndexes.last; rowIndex++ ) {
-			for ( const cell of ( table.getChild( rowIndex ) as Element ).getChildren() ) {
+			for ( const cell of ( table.getChild( rowIndex ) as ModelElement ).getChildren() ) {
 				rangesToSelect.push( model.createRangeOn( cell ) );
 			}
 		}

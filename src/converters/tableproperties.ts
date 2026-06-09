@@ -1,28 +1,49 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/converters/tableproperties
  */
 
-import type { Conversion, ViewElement } from 'ckeditor5/src/engine.js';
+import type { Editor } from '@ckeditor/ckeditor5-core';
+import type {
+	Conversion,
+	UpcastConversionApi,
+	UpcastConversionData,
+	ViewElement,
+	ModelElement,
+	UpcastElementEvent,
+	Consumables,
+	StyleValue,
+	BoxStyleSides,
+	DowncastAttributeEvent
+} from '@ckeditor/ckeditor5-engine';
+import { first } from '@ckeditor/ckeditor5-utils';
+
+const ALIGN_VALUES_REG_EXP = /^(left|center|right)$/;
+const FLOAT_VALUES_REG_EXP = /^(left|none|right)$/;
 
 /**
  * Conversion helper for upcasting attributes using normalized styles.
  *
  * @param options.modelAttribute The attribute to set.
  * @param options.styleName The style name to convert.
+ * @param options.attributeName The HTML attribute name to convert.
+ * @param options.attributeType The HTML attribute type for value normalization.
  * @param options.viewElement The view element name that should be converted.
  * @param options.defaultValue The default value for the specified `modelAttribute`.
  * @param options.shouldUpcast The function which returns `true` if style should be upcasted from this element.
+ * @internal
  */
 export function upcastStyleToAttribute(
 	conversion: Conversion,
 	options: {
 		modelAttribute: string;
 		styleName: string;
+		attributeName?: string;
+		attributeType?: 'length' | 'color';
 		viewElement: string | RegExp;
 		defaultValue: string;
 		reduceBoxSides?: boolean;
@@ -32,10 +53,12 @@ export function upcastStyleToAttribute(
 	const {
 		modelAttribute,
 		styleName,
+		attributeName,
+		attributeType,
 		viewElement,
 		defaultValue,
-		reduceBoxSides = false,
-		shouldUpcast = () => true
+		shouldUpcast = () => true,
+		reduceBoxSides = false
 	} = options;
 
 	conversion.for( 'upcast' ).attributeToAttribute( {
@@ -47,22 +70,79 @@ export function upcastStyleToAttribute(
 		},
 		model: {
 			key: modelAttribute,
-			value: ( viewElement: ViewElement ) => {
+			value: ( viewElement: ViewElement, conversionApi: UpcastConversionApi, data: UpcastConversionData<ViewElement> ) => {
+				// Ignore table elements inside figures and figures without the table class.
 				if ( !shouldUpcast( viewElement ) ) {
 					return;
 				}
 
-				const normalized = viewElement.getNormalizedStyle( styleName ) as Record<Side, string>;
+				const localDefaultValue = getDefaultValueAdjusted( defaultValue, '', data );
+
+				const normalized = viewElement.getNormalizedStyle( styleName ) as BoxStyleSides;
 				const value = reduceBoxSides ? reduceBoxSidesValue( normalized ) : normalized;
 
-				if ( defaultValue !== value ) {
+				if ( localDefaultValue !== value ) {
 					return value;
 				}
+
+				// Consume the style even if not applied to the element so it won't be processed by other converters.
+				conversionApi.consumable.consume( viewElement, { styles: styleName } );
 			}
 		}
 	} );
+
+	if ( attributeName ) {
+		conversion.for( 'upcast' ).attributeToAttribute( {
+			view: {
+				name: viewElement,
+				attributes: {
+					[ attributeName ]: /.+/
+				}
+			},
+			model: {
+				key: modelAttribute,
+				value: ( viewElement: ViewElement, conversionApi: UpcastConversionApi, data: UpcastConversionData<ViewElement> ) => {
+					// Convert attributes of table and table cell elements, ignore figure.
+					// Do not convert attribute if related style is set as it has a higher priority.
+					// Do not convert attribute if the element is a table inside a figure with the related style set.
+					if (
+						viewElement.name == 'figure' ||
+						viewElement.hasStyle( styleName ) ||
+						viewElement.name == 'table' && viewElement.parent!.name == 'figure' && viewElement.parent!.hasStyle( styleName )
+					) {
+						return;
+					}
+
+					const localDefaultValue = getDefaultValueAdjusted( defaultValue, '', data );
+					let value = viewElement.getAttribute( attributeName );
+
+					if ( value && attributeType == 'length' ) {
+						const parsedValue = parseFloat( value );
+
+						if ( isNaN( parsedValue ) ) {
+							value = localDefaultValue;
+						} else {
+							value = parsedValue + ( value.includes( '%' ) ? '%' : 'px' );
+						}
+					}
+
+					if ( localDefaultValue !== value ) {
+						return value;
+					}
+
+					// Consume the attribute even if not applied to the element so it won't be processed by other converters.
+					conversionApi.consumable.consume( viewElement, { attributes: attributeName } );
+				}
+			}
+		} );
+	}
 }
 
+/**
+ * The style values for border styles.
+ *
+ * @internal
+ */
 export interface StyleValues {
 	color: string;
 	style: string;
@@ -72,86 +152,146 @@ export interface StyleValues {
 /**
  * Conversion helper for upcasting border styles for view elements.
  *
+ * @param editor The editor instance.
  * @param defaultBorder The default border values.
  * @param defaultBorder.color The default `borderColor` value.
  * @param defaultBorder.style The default `borderStyle` value.
  * @param defaultBorder.width The default `borderWidth` value.
+ * @internal
  */
 export function upcastBorderStyles(
-	conversion: Conversion,
+	editor: Editor,
 	viewElementName: string,
 	modelAttributes: StyleValues,
 	defaultBorder: StyleValues
 ): void {
-	conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:' + viewElementName, ( evt, data, conversionApi ) => {
-		// If the element was not converted by element-to-element converter,
-		// we should not try to convert the style. See #8393.
-		if ( !data.modelRange ) {
-			return;
-		}
+	const { conversion } = editor;
 
-		// Check the most detailed properties. These will be always set directly or
-		// when using the "group" properties like: `border-(top|right|bottom|left)` or `border`.
-		const stylesToConsume = [
-			'border-top-width',
-			'border-top-color',
-			'border-top-style',
-			'border-bottom-width',
-			'border-bottom-color',
-			'border-bottom-style',
-			'border-right-width',
-			'border-right-color',
-			'border-right-style',
-			'border-left-width',
-			'border-left-color',
-			'border-left-style'
-		].filter( styleName => data.viewItem.hasStyle( styleName ) );
+	conversion.for( 'upcast' ).add( dispatcher => {
+		dispatcher.on<UpcastElementEvent>( `element:${ viewElementName }`, ( evt, data, conversionApi ) => {
+			const { modelRange, viewItem } = data;
+			// If the element was not converted by element-to-element converter,
+			// we should not try to convert the style. See #8393.
+			if ( !modelRange ) {
+				return;
+			}
 
-		if ( !stylesToConsume.length ) {
-			return;
-		}
+			// Check the most detailed properties. These will be always set directly or
+			// when using the "group" properties like: `border-(top|right|bottom|left)` or `border`.
+			const stylesToConsume = [
+				'border-top-width',
+				'border-top-color',
+				'border-top-style',
+				'border-bottom-width',
+				'border-bottom-color',
+				'border-bottom-style',
+				'border-right-width',
+				'border-right-color',
+				'border-right-style',
+				'border-left-width',
+				'border-left-color',
+				'border-left-style'
+			].filter( styleName => viewItem.hasStyle( styleName ) );
 
-		const matcherPattern = {
-			styles: stylesToConsume
-		};
+			const viewTable = (
+				viewItem.is( 'element', 'table' ) ?
+					viewItem :
+					viewItem.findAncestor( 'table' )
+			)!;
 
-		// Try to consume appropriate values from consumable values list.
-		if ( !conversionApi.consumable.test( data.viewItem, matcherPattern ) ) {
-			return;
-		}
+			const hasTableBorderAttribute = viewTable.hasAttribute( 'border' );
 
-		const modelElement = [ ...data.modelRange.getItems( { shallow: true } ) ].pop();
+			if ( !stylesToConsume.length && !hasTableBorderAttribute ) {
+				return;
+			}
 
-		conversionApi.consumable.consume( data.viewItem, matcherPattern );
+			const matcherPattern = {
+				styles: stylesToConsume
+			};
 
-		const normalizedBorder = {
-			style: data.viewItem.getNormalizedStyle( 'border-style' ),
-			color: data.viewItem.getNormalizedStyle( 'border-color' ),
-			width: data.viewItem.getNormalizedStyle( 'border-width' )
-		};
+			// Try to consume appropriate values from consumable values list.
+			// The border attribute should be ignored if the styles are already consumed, so it won't be converted to the border width.
+			if ( !conversionApi.consumable.test( viewItem, matcherPattern ) ) {
+				return;
+			}
 
-		const reducedBorder = {
-			style: reduceBoxSidesValue( normalizedBorder.style ),
-			color: reduceBoxSidesValue( normalizedBorder.color ),
-			width: reduceBoxSidesValue( normalizedBorder.width )
-		};
+			const modelElement = first( modelRange.getItems( { shallow: true } ) ) as ModelElement;
+			const tableModelElement = modelElement.findAncestor( 'table', { includeSelf: true } );
 
-		if ( reducedBorder.style !== defaultBorder.style ) {
-			conversionApi.writer.setAttribute( modelAttributes.style, reducedBorder.style, modelElement );
-		}
+			let localDefaultBorder = defaultBorder;
 
-		if ( reducedBorder.color !== defaultBorder.color ) {
-			conversionApi.writer.setAttribute( modelAttributes.color, reducedBorder.color, modelElement );
-		}
+			if ( tableModelElement && tableModelElement.getAttribute( 'tableType' ) == 'layout' ) {
+				localDefaultBorder = {
+					style: 'none',
+					color: '',
+					width: ''
+				};
+			}
 
-		if ( reducedBorder.width !== defaultBorder.width ) {
-			conversionApi.writer.setAttribute( modelAttributes.width, reducedBorder.width, modelElement );
-		}
-	} ) );
+			conversionApi.consumable.consume( viewItem, matcherPattern );
+
+			const normalizedBorder = {
+				style: viewItem.getNormalizedStyle( 'border-style' ) as BoxStyleSides | undefined,
+				color: viewItem.getNormalizedStyle( 'border-color' ) as BoxStyleSides | undefined,
+				width: viewItem.getNormalizedStyle( 'border-width' ) as BoxStyleSides | undefined
+			};
+
+			// When `border` attribute is present on the table element, it should be converted to the border width,
+			// merged with current inline `border-width` styles and then consumed.
+			if (
+				hasTableBorderAttribute &&
+				conversionApi.consumable.test( viewTable, { attributes: 'border' } )
+			) {
+				// If the `border` attribute has no value or has invalid value, it should be treated as `border="1"`.
+				const borderValue = parseFloat( viewTable.getAttribute( 'border' ) || '1' );
+
+				// If the `border` value is invalid (e.g. negative, infinite or non-numeric), it should be treated as `1`.
+				const shouldBeOne = Number.isNaN( borderValue ) || !Number.isFinite( borderValue ) || borderValue < 0;
+
+				// For table cells the `border` attribute should be clamped to 1px as higher values are not rendered in browsers.
+				const borderPx = shouldBeOne || viewItem.name != 'table' && borderValue > 1 ?
+					'1px' :
+					`${ borderValue }px`;
+
+				normalizedBorder.width = {
+					top: borderPx,
+					bottom: borderPx,
+					right: borderPx,
+					left: borderPx,
+
+					...( normalizedBorder.width || {} )
+				};
+
+				if ( viewItem.is( 'element', 'table' ) ) {
+					conversionApi.consumable.consume( viewTable, { attributes: 'border' } );
+				}
+			}
+
+			const reducedBorder = {
+				style: reduceBoxSidesValue( normalizedBorder.style ),
+				color: reduceBoxSidesValue( normalizedBorder.color ),
+				width: reduceBoxSidesValue( normalizedBorder.width )
+			};
+
+			if ( reducedBorder.style !== localDefaultBorder.style ) {
+				conversionApi.writer.setAttribute( modelAttributes.style, reducedBorder.style, modelElement );
+			}
+
+			if ( reducedBorder.color !== localDefaultBorder.color ) {
+				conversionApi.writer.setAttribute( modelAttributes.color, reducedBorder.color, modelElement );
+			}
+
+			if ( reducedBorder.width !== localDefaultBorder.width ) {
+				conversionApi.writer.setAttribute( modelAttributes.width, reducedBorder.width, modelElement );
+			}
+		} );
+	} );
 }
 
 /**
  * Conversion helper for downcasting an attribute to a style.
+ *
+ * @internal
  */
 export function downcastAttributeToStyle(
 	conversion: Conversion,
@@ -179,6 +319,8 @@ export function downcastAttributeToStyle(
 
 /**
  * Conversion helper for downcasting attributes from the model table to a view table (not to `<figure>`).
+ *
+ * @internal
  */
 export function downcastTableAttribute(
 	conversion: Conversion,
@@ -189,36 +331,57 @@ export function downcastTableAttribute(
 ): void {
 	const { modelAttribute, styleName } = options;
 
-	conversion.for( 'downcast' ).add( dispatcher => dispatcher.on( `attribute:${ modelAttribute }:table`, ( evt, data, conversionApi ) => {
-		const { item, attributeNewValue } = data;
-		const { mapper, writer } = conversionApi;
+	conversion.for( 'downcast' ).add( dispatcher => {
+		dispatcher.on<DowncastAttributeEvent<ModelElement>>( `attribute:${ modelAttribute }:table`, ( evt, data, conversionApi ) => {
+			const { item, attributeNewValue } = data;
+			const { mapper, writer } = conversionApi;
 
-		if ( !conversionApi.consumable.consume( data.item, evt.name ) ) {
-			return;
-		}
+			if ( !conversionApi.consumable.consume( data.item, evt.name ) ) {
+				return;
+			}
 
-		const table = [ ...mapper.toViewElement( item ).getChildren() ].find( child => child.is( 'element', 'table' ) );
+			const table = Array.from( mapper.toViewElement( item )!.getChildren() )
+				.find( ( child ): child is ViewElement => child.is( 'element', 'table' ) )!;
 
-		if ( attributeNewValue ) {
-			writer.setStyle( styleName, attributeNewValue, table );
-		} else {
-			writer.removeStyle( styleName, table );
-		}
-	} ) );
+			if ( attributeNewValue ) {
+				writer.setStyle( styleName, attributeNewValue as StyleValue, table );
+			} else {
+				writer.removeStyle( styleName, table );
+			}
+		} );
+	} );
 }
 
-type Side = 'top' | 'right' | 'bottom' | 'left';
-type Style = Record<Side, string>;
+/**
+ * Returns the default value for table or table cell property adjusted for layout tables.
+ *
+ * @internal
+ */
+export function getDefaultValueAdjusted(
+	defaultValue: string,
+	layoutTableDefault: string,
+	data: UpcastConversionData<ViewElement>
+): string {
+	const modelElement = data.modelRange && first( data.modelRange.getItems( { shallow: true } ) );
+	const tableElement = modelElement && modelElement.is( 'element' ) && modelElement.findAncestor( 'table', { includeSelf: true } );
+
+	if ( tableElement && tableElement.getAttribute( 'tableType' ) === 'layout' ) {
+		return layoutTableDefault;
+	}
+
+	return defaultValue;
+}
 
 /**
  * Reduces the full top, right, bottom, left object to a single string if all sides are equal.
  * Returns original style otherwise.
  */
-function reduceBoxSidesValue( style?: Style ): undefined | string | Style {
+function reduceBoxSidesValue( style?: BoxStyleSides ): undefined | string | BoxStyleSides {
 	if ( !style ) {
 		return;
 	}
-	const sides: Array<Side> = [ 'top', 'right', 'bottom', 'left' ];
+
+	const sides = [ 'top', 'right', 'bottom', 'left' ] as const;
 	const allSidesDefined = sides.every( side => style[ side ] );
 
 	if ( !allSidesDefined ) {
@@ -234,3 +397,277 @@ function reduceBoxSidesValue( style?: Style ): undefined | string | Style {
 
 	return topSideStyle;
 }
+
+/**
+ * Conversion helper for upcasting the `cellpadding` table attribute.
+ *
+ * @param editor The editor instance.
+ * @param viewElementName The view element name that should be converted.
+ * @param defaultPadding The default padding value.
+ * @internal
+ */
+export function upcastTableCellPaddingAttribute(
+	editor: Editor,
+	viewElementName: string,
+	defaultPadding?: string
+): void {
+	const { conversion } = editor;
+
+	conversion.for( 'upcast' ).add( dispatcher => {
+		dispatcher.on<UpcastElementEvent>( `element:${ viewElementName }`, ( evt, data, conversionApi ) => {
+			const { modelRange, viewItem } = data;
+			// If the element was not converted by element-to-element converter,
+			// we should not try to convert the style. See #8393.
+			if ( !modelRange ) {
+				return;
+			}
+
+			if ( viewItem.is( 'element', 'table' ) ) {
+				conversionApi.consumable.consume( viewItem, { attributes: 'cellpadding' } );
+
+				return;
+			}
+
+			const viewTable = viewItem.findAncestor( 'table' )!;
+			const hasTableCellPaddingAttribute = viewTable.hasAttribute( 'cellpadding' );
+
+			if (
+				!hasTableCellPaddingAttribute ||
+				!conversionApi.consumable.test( viewTable, { attributes: 'cellpadding' } )
+			) {
+				return;
+			}
+
+			const modelElement = modelRange?.start?.nodeAfter as ModelElement;
+
+			// If the `cellpadding` attribute has no value or has invalid value, it should be treated as `cellpadding="1"`.
+			const cellpaddingValue = parseFloat( viewTable.getAttribute( 'cellpadding' ) || '1' );
+			// If the `cellpadding` value is invalid (e.g. negative, infinite or non-numeric), it should be treated as `0`.
+			const shouldBeZero = Number.isNaN( cellpaddingValue ) || !Number.isFinite( cellpaddingValue ) || cellpaddingValue < 0;
+			const cellpaddingPx = shouldBeZero ? '0px' : `${ cellpaddingValue }px`;
+
+			const tableCellPaddings = modelElement.getAttribute( 'tableCellPadding' );
+
+			if ( !tableCellPaddings ) {
+				if ( defaultPadding !== cellpaddingPx ) {
+					conversionApi.writer.setAttribute( 'tableCellPadding', cellpaddingPx, modelElement );
+				}
+			} else if ( typeof tableCellPaddings === 'object' ) {
+				const normalizedPaddings = {
+					...( defaultPadding !== cellpaddingPx && { top: cellpaddingPx } ),
+					...( defaultPadding !== cellpaddingPx && { right: cellpaddingPx } ),
+					...( defaultPadding !== cellpaddingPx && { bottom: cellpaddingPx } ),
+					...( defaultPadding !== cellpaddingPx && { left: cellpaddingPx } ),
+
+					...tableCellPaddings
+				};
+
+				conversionApi.writer.setAttribute( 'tableCellPadding', normalizedPaddings, modelElement );
+			}
+		}, { priority: 'low' } );
+	} );
+}
+
+/**
+ * Default table alignment options.
+ */
+export const DEFAULT_TABLE_ALIGNMENT_OPTIONS = {
+	left: { className: 'table-style-align-left' },
+	center: { className: 'table-style-align-center' },
+	right: { className: 'table-style-align-right' },
+	blockLeft: { className: 'table-style-block-align-left' },
+	blockRight: { className: 'table-style-block-align-right' }
+};
+
+/**
+ * Configuration for upcasting table alignment from view to model.
+ */
+export const upcastTableAlignmentConfig: Array<UpcastTableAlignmentConfig> = [
+	// Support for the `float:*;` CSS definition for the table alignment.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			styles: {
+				float: FLOAT_VALUES_REG_EXP
+			}
+		},
+		getAlign: ( viewElement: ViewElement ): string | undefined => {
+			let align = viewElement.getStyle( 'float' );
+
+			if ( align === 'none' ) {
+				align = 'center';
+			}
+
+			return align;
+		},
+		getConsumables( viewElement: ViewElement ): Consumables {
+			const float = viewElement.getStyle( 'float' );
+			const styles: Array<string> = [ 'float' ];
+
+			if ( float === 'left' && viewElement.hasStyle( 'margin-right' ) ) {
+				styles.push( 'margin-right' );
+			} else if ( float === 'right' && viewElement.hasStyle( 'margin-left' ) ) {
+				styles.push( 'margin-left' );
+			}
+
+			return { styles };
+		}
+	},
+	// Support for the `margin-left:auto; margin-right:auto;` CSS definition for the table alignment.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			styles: {
+				'margin-left': 'auto',
+				'margin-right': 'auto'
+			}
+		},
+		getAlign: (): string => 'center',
+		getConsumables: (): Consumables => {
+			return { styles: [ 'margin-left', 'margin-right' ] };
+		}
+	},
+	// Support for the left alignment using CSS classes.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			key: 'class',
+			value: 'table-style-align-left'
+		},
+		getAlign: (): string => 'left',
+		getConsumables(): Consumables {
+			return { classes: DEFAULT_TABLE_ALIGNMENT_OPTIONS.left.className };
+		}
+	},
+	// Support for the right alignment using CSS classes.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			key: 'class',
+			value: DEFAULT_TABLE_ALIGNMENT_OPTIONS.right.className
+		},
+		getAlign: (): string => 'right',
+		getConsumables(): Consumables {
+			return { classes: DEFAULT_TABLE_ALIGNMENT_OPTIONS.right.className };
+		}
+	},
+	// Support for the center alignment using CSS classes.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			key: 'class',
+			value: DEFAULT_TABLE_ALIGNMENT_OPTIONS.center.className
+		},
+		getAlign: (): string => 'center',
+		getConsumables(): Consumables {
+			return { classes: DEFAULT_TABLE_ALIGNMENT_OPTIONS.center.className };
+		}
+	},
+	// Support for the block alignment left using CSS classes.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			key: 'class',
+			value: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockLeft.className
+		},
+		getAlign: (): string => 'blockLeft',
+		getConsumables(): Consumables {
+			return { classes: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockLeft.className };
+		}
+	},
+	// Support for the block alignment right using CSS classes.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			key: 'class',
+			value: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockRight.className
+		},
+		getAlign: (): string => 'blockRight',
+		getConsumables(): Consumables {
+			return { classes: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockRight.className };
+		}
+	},
+	// Support for the block alignment left using margin CSS styles.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			styles: {
+				'margin-left': '0',
+				'margin-right': 'auto'
+			}
+		},
+		getAlign: (): string => 'blockLeft',
+		getConsumables(): Consumables {
+			return { styles: [ 'margin-left', 'margin-right' ] };
+		}
+	},
+	// Support for the block alignment right using margin CSS styles.
+	{
+		view: {
+			name: /^(table|figure)$/,
+			styles: {
+				'margin-left': 'auto',
+				'margin-right': '0'
+			}
+		},
+		getAlign: (): string => 'blockRight',
+		getConsumables(): Consumables {
+			return { styles: [ 'margin-left', 'margin-right' ] };
+		}
+	},
+	// Support for the `align` attribute as the backward compatibility while pasting from other sources.
+	{
+		view: {
+			name: 'table',
+			attributes: {
+				align: ALIGN_VALUES_REG_EXP
+			}
+		},
+		getAlign: ( viewElement: ViewElement ): string | undefined => viewElement.getAttribute( 'align' ),
+		getConsumables(): Consumables {
+			return { attributes: 'align' };
+		}
+	}
+];
+
+export const downcastTableAlignmentConfig: Record<TableAlignmentValues, { align: string | undefined; style: string; className: string }> = {
+	center: {
+		align: 'center',
+		style: 'margin-left: auto; margin-right: auto;',
+		className: 'table-style-align-center'
+	},
+	left: {
+		align: 'left',
+		style: 'float: left;',
+		className: 'table-style-align-left'
+	},
+	right: {
+		align: 'right',
+		style: 'float: right;',
+		className: 'table-style-align-right'
+	},
+	blockLeft: {
+		align: undefined,
+		style: 'margin-left: 0; margin-right: auto;',
+		className: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockLeft.className
+	},
+	blockRight: {
+		align: undefined,
+		style: 'margin-left: auto; margin-right: 0;',
+		className: DEFAULT_TABLE_ALIGNMENT_OPTIONS.blockRight.className
+	}
+};
+
+type UpcastTableAlignmentConfig = {
+	view: {
+		name: RegExp | string;
+		styles?: Record<string, RegExp | string>;
+		attributes?: Record<string, RegExp | string>;
+		key?: string;
+		value?: RegExp | string;
+	};
+	getAlign: ( ( viewElement: ViewElement ) => string | undefined ) | ( () => string );
+	getConsumables: ( viewElement: ViewElement ) => Consumables;
+};
+
+export type TableAlignmentValues = 'left' | 'center' | 'right' | 'blockLeft' | 'blockRight';

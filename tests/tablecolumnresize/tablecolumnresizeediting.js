@@ -1,30 +1,29 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* global document */
-
-import TableColumnResizeEditing from '../../src/tablecolumnresize/tablecolumnresizeediting.js';
-import TableColumnResize from '../../src/tablecolumnresize.js';
-import TableCaption from '../../src/tablecaption.js';
-import TableToolbar from '../../src/tabletoolbar.js';
-import Table from '../../src/table.js';
-import TableProperties from '../../src/tableproperties.js';
-import PlainTableOutput from '../../src/plaintableoutput.js';
+import { TableColumnResizeEditing } from '../../src/tablecolumnresize/tablecolumnresizeediting.js';
+import { TableColumnResize } from '../../src/tablecolumnresize.js';
+import { TableCaption } from '../../src/tablecaption.js';
+import { TableToolbar } from '../../src/tabletoolbar.js';
+import { Table } from '../../src/table.js';
+import { TableProperties } from '../../src/tableproperties.js';
+import { PlainTableOutput } from '../../src/plaintableoutput.js';
 
 // ClassicTestEditor can't be used, as it doesn't handle the focus, which is needed to test resizer visual cues.
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
-import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import Bold from '@ckeditor/ckeditor5-basic-styles/src/bold.js';
-import LinkEditing from '@ckeditor/ckeditor5-link/src/linkediting.js';
-import HighlightEditing from '@ckeditor/ckeditor5-highlight/src/highlightediting.js';
-import GeneralHtmlSupport from '@ckeditor/ckeditor5-html-support/src/generalhtmlsupport.js';
-import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
+import { ClassicEditor } from '@ckeditor/ckeditor5-editor-classic';
+import { _getModelData, _setModelData } from '@ckeditor/ckeditor5-engine';
+import { Bold } from '@ckeditor/ckeditor5-basic-styles';
+import { LinkEditing } from '@ckeditor/ckeditor5-link';
+import { HighlightEditing } from '@ckeditor/ckeditor5-highlight';
+import { GeneralHtmlSupport } from '@ckeditor/ckeditor5-html-support';
+import { ClipboardPipeline } from '@ckeditor/ckeditor5-clipboard';
 
 import { focusEditor } from '@ckeditor/ckeditor5-widget/tests/widgetresize/_utils/utils.js';
 import { modelTable } from '../_utils/utils.js';
 import {
+	getComputedStyle,
 	getDomTable,
 	getModelTable,
 	getViewTable,
@@ -38,7 +37,8 @@ import {
 	getDomResizer
 } from './_utils/utils.js';
 import {
-	COLUMN_MIN_WIDTH_IN_PIXELS
+	COLUMN_MIN_WIDTH_IN_PIXELS,
+	COLUMN_RESIZE_DISTANCE_THRESHOLD
 } from '../../src/tablecolumnresize/constants.js';
 import {
 	clamp,
@@ -46,11 +46,12 @@ import {
 	getTableColumnsWidths,
 	getColumnGroupElement
 } from '../../src/tablecolumnresize/utils.js';
-import TableWidthsCommand from '../../src/tablecolumnresize/tablewidthscommand.js';
-import WidgetResize from '@ckeditor/ckeditor5-widget/src/widgetresize.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import { TableWidthsCommand } from '../../src/tablecolumnresize/tablewidthscommand.js';
+import { WidgetResize } from '@ckeditor/ckeditor5-widget';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
 import { Undo } from '@ckeditor/ckeditor5-undo';
 import { MultiRootEditor } from '@ckeditor/ckeditor5-editor-multi-root';
+import { Rect } from '@ckeditor/ckeditor5-utils';
 
 describe( 'TableColumnResizeEditing', () => {
 	let model, editor, view, editorElement, contentDirection, resizePlugin;
@@ -86,12 +87,16 @@ describe( 'TableColumnResizeEditing', () => {
 		expect( TableColumnResizeEditing.isOfficialPlugin ).to.be.true;
 	} );
 
-	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
-		expect( TableColumnResizeEditing.isPremiumPlugin ).to.be.false;
+	it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
+		expect( TableColumnResizeEditing.isPremiumPlugin ).to.be.true;
+	} );
+
+	it( 'should have `licenseFeatureCode` static flag set to `TCR`', () => {
+		expect( TableColumnResizeEditing.licenseFeatureCode ).to.equal( 'TCR' );
 	} );
 
 	it( 'should have defined column widths in model', () => {
-		setModelData( model, modelTable( [
+		_setModelData( model, modelTable( [
 			[ '00', '01', '02' ],
 			[ '10', '11', '12' ]
 		], { columnWidths: '25%,25%,50%' } ) );
@@ -100,7 +105,7 @@ describe( 'TableColumnResizeEditing', () => {
 	} );
 
 	it( 'should have defined col widths in view', () => {
-		setModelData( model, modelTable( [
+		_setModelData( model, modelTable( [
 			[ '00', '01', '02' ],
 			[ '10', '11', '12' ]
 		], { columnWidths: '25%,25%,50%' } ) );
@@ -124,9 +129,13 @@ describe( 'TableColumnResizeEditing', () => {
 		expect( editor.commands.get( 'resizeColumnWidths' ) ).to.be.instanceOf( TableWidthsCommand );
 	} );
 
+	it( 'registers schema attributes as formatting', () => {
+		expect( editor.model.schema.getAttributeProperties( 'columnWidth' ).isFormatting ).to.be.true;
+	} );
+
 	describe( 'conversion', () => {
 		describe( 'upcast', () => {
-			it( 'the table width style to tableWidth attribute correctly', () => {
+			it( 'the table width style set on <figure> element to tableWidth attribute correctly', () => {
 				editor.setData(
 					`<figure class="table" style="width: 100%">
 						<table>
@@ -144,8 +153,78 @@ describe( 'TableColumnResizeEditing', () => {
 					</figure>`
 				);
 
-				expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+				expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 					'<table tableWidth="100%">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>11</paragraph>' +
+							'</tableCell>' +
+							'<tableCell>' +
+								'<paragraph>12</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+			} );
+
+			it( 'the table width style set on <table> element to tableWidth attribute correctly', () => {
+				editor.setData(
+					`<table class="table" style="width: 100%">
+						<colgroup>
+							<col style="width:50%;">
+							<col style="width:50%;">
+						</colgroup>
+						<tbody>
+							<tr>
+								<td>11</td>
+								<td>12</td>
+							</tr>
+						</tbody>
+					</table>`
+				);
+
+				expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+					'<table tableWidth="100%">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>11</paragraph>' +
+							'</tableCell>' +
+							'<tableCell>' +
+								'<paragraph>12</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+			} );
+
+			it( 'the table width style set on <figure> element and on <table> should be convert to tableWidth attribute correctly', () => {
+				editor.setData(
+					`<figure class="table" style="width: 200px">
+						<table style="width:100px">
+							<colgroup>
+								<col style="width:50%;">
+								<col style="width:50%;">
+							</colgroup>
+							<tbody>
+								<tr>
+									<td>11</td>
+									<td>12</td>
+								</tr>
+							</tbody>
+						</table>
+					</figure>`
+				);
+
+				expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+					'<table tableWidth="200px">' +
 						'<tableRow>' +
 							'<tableCell>' +
 								'<paragraph>11</paragraph>' +
@@ -183,7 +262,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -224,7 +303,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -267,7 +346,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -309,7 +388,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -351,7 +430,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -393,7 +472,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -433,7 +512,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -473,7 +552,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -520,7 +599,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -554,7 +633,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -599,7 +678,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -653,7 +732,7 @@ describe( 'TableColumnResizeEditing', () => {
 						</figure>`
 					);
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -679,11 +758,22 @@ describe( 'TableColumnResizeEditing', () => {
 					);
 				} );
 			} );
+
+			it( 'should consume ck-table-resized class during table conversion', () => {
+				const upcastSpy = sinon.spy( ( evt, data, conversionApi ) => {
+					expect( conversionApi.consumable.test( data.viewItem, { classes: 'ck-table-resized' } ) ).to.be.false;
+				} );
+
+				editor.data.upcastDispatcher.on( 'element:table', upcastSpy, { priority: 'lowest' } );
+				editor.setData( '<figure class="table"><table class="ck-table-resized">xyz</table></figure>' );
+
+				expect( upcastSpy ).to.be.called;
+			} );
 		} );
 
 		describe( 'downcast', () => {
 			it( 'the tableWidth attribute correctly', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '11', '12' ]
 				], { columnWidths: '50%,50%', tableWidth: '100%' } ) );
 
@@ -706,7 +796,7 @@ describe( 'TableColumnResizeEditing', () => {
 			} );
 
 			it( 'should remove <colgroup> element if <tableColumnGroup> element was removed', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '11', '12' ]
 				], { columnWidths: '50%,50%', tableWidth: '100%' } ) );
 
@@ -749,7 +839,7 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 
 				it( 'should create resizers when row is inserted', () => {
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '00', '01', '02' ],
 						[ '10', '11', '[12]' ]
 					], { columnWidths: '25%,25%,50%' } ) );
@@ -763,7 +853,7 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 
 				it( 'should create resizers when cell from splitting is inserted', () => {
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '00', '01', '02' ],
 						[ '10', '11', '[12]' ]
 					], { columnWidths: '25%,25%,50%' } ) );
@@ -960,7 +1050,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 	describe( 'does not start resizing', () => {
 		it( 'if not clicked on the resizer', () => {
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -969,10 +1059,20 @@ describe( 'TableColumnResizeEditing', () => {
 
 			expect( resizePlugin._isResizingActive ).to.be.false;
 			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+
+			tableColumnResizeMouseSimulator.over( editor, view.getDomRoot() );
+
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+
+			tableColumnResizeMouseSimulator.out( editor, view.getDomRoot() );
+
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
 		} );
 
 		it( 'if resizing is not allowed', () => {
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -983,6 +1083,16 @@ describe( 'TableColumnResizeEditing', () => {
 
 			expect( resizePlugin._isResizingActive ).to.be.false;
 			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+
+			tableColumnResizeMouseSimulator.over( editor, getDomResizer( getDomTable( view ), 0, 0 ) );
+
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+
+			tableColumnResizeMouseSimulator.out( editor, getDomResizer( getDomTable( view ), 0, 0 ) );
+
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
 		} );
 
 		it( 'without dragging', () => {
@@ -990,7 +1100,7 @@ describe( 'TableColumnResizeEditing', () => {
 			const columnToResizeIndex = 0;
 			const mouseMovementVector = { x: 0, y: 0 };
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1020,7 +1130,7 @@ describe( 'TableColumnResizeEditing', () => {
 		} );
 
 		it( 'without mousedown event before mousemove', () => {
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1035,11 +1145,58 @@ describe( 'TableColumnResizeEditing', () => {
 			expect( finalViewColumnWidthsPx ).to.deep.equal( initialViewColumnWidthsPx );
 			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
 		} );
+
+		it( 'after mouseover sets resizer sizes, after mouseout removes them', () => {
+			_setModelData( model, modelTable( [
+				[ '00', '01', '02' ],
+				[ '10', '11', '12' ]
+			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
+
+			const tableRect = getDomTableRects( getDomTable( view ) );
+
+			const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+			const resizerBeforeMouseOver = getDomResizer( getDomTable( view ), 0, 0 );
+
+			expect( resizerBeforeMouseOver.outerHTML ).to.equal( '<div class="ck-table-column-resizer"></div>' );
+			expect( getComputedStyle( resizerBeforeMouseOver, 'top' ) ).to.equal( '0px' );
+			expect( getComputedStyle( resizerBeforeMouseOver, 'bottom' ) ).to.equal( '0px' );
+
+			tableColumnResizeMouseSimulator.over( editor, getDomResizer( getDomTable( view ), 0, 0 ) );
+
+			const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+			const resizerAfterMouseOver = getDomResizer( getDomTable( view ), 0, 0 );
+
+			const resizerRect = new Rect( resizerAfterMouseOver.parentElement );
+
+			const top = Number( ( tableRect.top - resizerRect.top ).toFixed( 4 ) );
+			const bottom = Number( ( resizerRect.bottom - tableRect.bottom ).toFixed( 4 ) );
+
+			expect( getComputedStyle( resizerAfterMouseOver, 'top' ) ).to.equal( top + 'px' );
+			expect( getComputedStyle( resizerAfterMouseOver, 'bottom' ) ).to.equal( bottom + 'px' );
+
+			expect( resizerAfterMouseOver.outerHTML ).to.equal(
+				`<div class="ck-table-column-resizer" style="bottom:${ bottom }px;top:${ top }px;"></div>`
+			);
+
+			const resizerAfterMouseOut = getDomResizer( getDomTable( view ), 0, 0 );
+
+			tableColumnResizeMouseSimulator.out( editor, getDomResizer( getDomTable( view ), 0, 0 ), { x: 10, y: 0 } );
+
+			expect( getComputedStyle( resizerAfterMouseOut, 'top' ) ).to.equal( '0px' );
+			expect( getComputedStyle( resizerAfterMouseOut, 'bottom' ) ).to.equal( '0px' );
+
+			expect( resizerAfterMouseOut.outerHTML ).to.equal(
+				'<div class="ck-table-column-resizer"></div>'
+			);
+
+			expect( finalViewColumnWidthsPx ).to.deep.equal( initialViewColumnWidthsPx );
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+		} );
 	} );
 
 	describe( 'while resizing', () => {
-		it( 'cancels resizing if resizing is not allowed during mousemove', () => {
-			setModelData( model, modelTable( [
+		it( 'cancels resizing if resizing is not allowed during mousemove (plugin does not allow)', () => {
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1059,8 +1216,8 @@ describe( 'TableColumnResizeEditing', () => {
 			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
 		} );
 
-		it( 'cancels resizing if resizing is not allowed during mousemove', () => {
-			setModelData( model, modelTable( [
+		it( 'cancels resizing if resizing is not allowed during mousemove (readonly mode)', () => {
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1079,7 +1236,7 @@ describe( 'TableColumnResizeEditing', () => {
 		} );
 
 		it( 'does nothing on mouseup if resizing was not started', () => {
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1094,12 +1251,49 @@ describe( 'TableColumnResizeEditing', () => {
 			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
 		} );
 
+		it( 'does not clean the resizer styles on mouseover if resizing was not finished', () => {
+			_setModelData( model, modelTable( [
+				[ '00', '01', '02' ],
+				[ '10', '11', '12' ]
+			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
+
+			const tableRect = getDomTableRects( getDomTable( view ) );
+
+			tableColumnResizeMouseSimulator.over( editor, getDomResizer( getDomTable( view ), 0, 0 ) );
+			tableColumnResizeMouseSimulator.down( editor, getDomResizer( getDomTable( view ), 0, 0 ) );
+			tableColumnResizeMouseSimulator.move( editor, getDomResizer( getDomTable( view ), 0, 0 ), { x: 10, y: 0 } );
+
+			const resizerAfterMouseOver = getDomResizer( getDomTable( view ), 0, 0 );
+			const resizerRect = new Rect( resizerAfterMouseOver.parentElement );
+
+			const top = Number( ( tableRect.top - resizerRect.top ).toFixed( 4 ) );
+			const bottom = Number( ( resizerRect.bottom - tableRect.bottom ).toFixed( 4 ) );
+
+			expect( getComputedStyle( resizerAfterMouseOver, 'top' ) ).to.equal( top + 'px' );
+			expect( getComputedStyle( resizerAfterMouseOver, 'bottom' ) ).to.equal( bottom + 'px' );
+
+			expect( resizerAfterMouseOver.outerHTML ).to.equal(
+				`<div class="ck-table-column-resizer ck-table-column-resizer__active" style="bottom:${ bottom }px;top:${ top }px;"></div>`
+			);
+
+			const resizerAfterMouseOut = getDomResizer( getDomTable( view ), 0, 0 );
+
+			tableColumnResizeMouseSimulator.out( editor, getDomResizer( getDomTable( view ), 0, 0 ), { x: 10, y: 0 } );
+
+			expect( getComputedStyle( resizerAfterMouseOut, 'top' ) ).to.equal( top + 'px' );
+			expect( getComputedStyle( resizerAfterMouseOut, 'bottom' ) ).to.equal( bottom + 'px' );
+
+			expect( resizerAfterMouseOut.outerHTML ).to.equal(
+				`<div class="ck-table-column-resizer ck-table-column-resizer__active" style="bottom:${ bottom }px;top:${ top }px;"></div>`
+			);
+		} );
+
 		it( 'does not change the widths if the movement vector was {0,0}', () => {
 			// Test-specific.
 			const columnToResizeIndex = 0;
 			const mouseMovementVector = { x: 0, y: 0 };
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ]
 			], { columnWidths: '25%,25%,50%', tableWidth: '40%' } ) );
@@ -1131,7 +1325,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 		describe( 'cancels resizing if resizing is not allowed during mouseup', () => {
 			it( 'if only columnWidths was changed', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '40%' } ) );
@@ -1152,7 +1346,7 @@ describe( 'TableColumnResizeEditing', () => {
 			} );
 
 			it( 'if columnWidths was set for the first time', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				] ) );
@@ -1173,7 +1367,7 @@ describe( 'TableColumnResizeEditing', () => {
 			} );
 
 			it( 'if tableWidth was changed', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '40%' } ) );
@@ -1194,7 +1388,7 @@ describe( 'TableColumnResizeEditing', () => {
 			} );
 
 			it( 'if tableWidth was set for the first time', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%' } ) );
@@ -1221,7 +1415,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 0;
 				const mouseMovementVector = { x: -10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '500px' } ) );
@@ -1255,7 +1449,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 0;
 				const mouseMovementVector = { x: -10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '500px', headingColumns: 1 } ) );
@@ -1289,7 +1483,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 0;
 				const mouseMovementVector = { x: 10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '500px' } ) );
@@ -1323,7 +1517,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 2;
 				const mouseMovementVector = { x: -10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '500px' } ) );
@@ -1357,7 +1551,38 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 0;
 				const mouseMovementVector = { x: 10, y: 0 };
 
-				setModelData( model, modelTable( [ [ '0', '1' ] ], { headingRows: '1', columnWidths: '50%,50%' } ) );
+				_setModelData( model, modelTable( [ [ '0', '1' ] ], { headingRows: '1', columnWidths: '50%,50%' } ) );
+
+				// Test-agnostic.
+				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector );
+
+				const finalModelColumnWidthsPc = getModelColumnWidthsPc( getModelTable( model ) );
+
+				assertModelWidthsSum( finalModelColumnWidthsPc );
+
+				const finalViewColumnWidthsPc = getViewColumnWidthsPc( getViewTable( view ) );
+
+				assertModelViewSync( finalModelColumnWidthsPc, finalViewColumnWidthsPc );
+
+				const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+				const expectedViewColumnWidthsPx = calculateExpectedWidthPixels(
+					initialViewColumnWidthsPx,
+					mouseMovementVector,
+					contentDirection,
+					columnToResizeIndex
+				);
+
+				assertViewPixelWidths( finalViewColumnWidthsPx, expectedViewColumnWidthsPx );
+			} );
+
+			it( 'correctly resizes a table with only footer rows', () => {
+				// Test-specific.
+				const columnToResizeIndex = 0;
+				const mouseMovementVector = { x: 10, y: 0 };
+
+				_setModelData( model, modelTable( [ [ '0', '1' ] ], { footerRows: '1', columnWidths: '50%,50%' } ) );
 
 				// Test-agnostic.
 				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
@@ -1385,7 +1610,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'does not remove column when it was shrinked to negative width', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1428,7 +1653,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'does not remove column when adjacent column was expanded over it', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
@@ -1474,7 +1699,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 0;
 				const mouseMovementVector = { x: -10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ { contents: '00', colspan: 2 }, '02' ],
 					[ '10', '11', '12' ],
 					[ '20', '21', '22' ]
@@ -1509,7 +1734,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 1;
 				const mouseMovementVector = { x: -10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', { contents: '02', rowspan: 3 } ],
 					[ '10', '11' ],
 					[ '20', '21' ]
@@ -1604,13 +1829,167 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 			} );
 
+			it( 'should not treat layout table as centered table (if not centered)', () => {
+				const columnToResizeIndex = 1;
+
+				// 10px mouse movement.
+				const mouseMovementVector = { x: 10, y: 0 };
+
+				_setModelData( model,
+					'<table tableWidth="500px" tableType="layout">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>00</paragraph></tableCell>' +
+							'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+
+				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector, 0 );
+
+				const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				const widthChange = finalViewColumnWidthsPx[ 1 ] - initialViewColumnWidthsPx[ 1 ];
+
+				expect( Math.abs( widthChange - mouseMovementVector.x ) ).to.approximately( 0, 1 );
+			} );
+
+			it( 'should treat layout table as centered table (if centered)', () => {
+				const columnToResizeIndex = 1;
+
+				// 10px mouse movement.
+				const mouseMovementVector = { x: 10, y: 0 };
+
+				_setModelData( model,
+					'<table tableWidth="500px" tableType="layout" tableAlignment="center">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>00</paragraph></tableCell>' +
+							'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+
+				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector, 0 );
+
+				const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				// In centered layout table, the change is doubled.
+				const widthChange = finalViewColumnWidthsPx[ 1 ] - initialViewColumnWidthsPx[ 1 ];
+
+				expect( Math.ceil( widthChange - mouseMovementVector.x * 2 ) ).to.approximately( 0, 1 );
+			} );
+
+			it( 'should not treat table with `align=right` default as centered', async () => {
+				await editor.destroy();
+				editor = await createEditor( {
+					table: {
+						tableProperties: {
+							defaultProperties: {
+								alignment: 'right'
+							}
+						}
+					}
+				} );
+
+				model = editor.model;
+				view = editor.editing.view;
+				contentDirection = editor.locale.contentLanguageDirection;
+				resizePlugin = editor.plugins.get( 'TableColumnResizeEditing' );
+
+				const columnToResizeIndex = 1;
+
+				// 10px mouse movement.
+				const mouseMovementVector = { x: 10, y: 0 };
+
+				_setModelData( model,
+					'<table tableWidth="500px">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>00</paragraph></tableCell>' +
+							'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+
+				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector, 0 );
+
+				const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				const widthChange = finalViewColumnWidthsPx[ 1 ] - initialViewColumnWidthsPx[ 1 ];
+
+				expect( Math.abs( widthChange - mouseMovementVector.x ) ).to.approximately( 0, 1 );
+			} );
+
+			it( 'should treat table with default `align=center` as centered', async () => {
+				await editor.destroy();
+				editor = await createEditor( {
+					table: {
+						tableProperties: {
+							defaultProperties: {
+								alignment: 'center'
+							}
+						}
+					}
+				} );
+
+				model = editor.model;
+				view = editor.editing.view;
+				contentDirection = editor.locale.contentLanguageDirection;
+				resizePlugin = editor.plugins.get( 'TableColumnResizeEditing' );
+
+				const columnToResizeIndex = 1;
+
+				// 10px mouse movement.
+				const mouseMovementVector = { x: 10, y: 0 };
+
+				_setModelData( model,
+					'<table tableWidth="500px">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>00</paragraph></tableCell>' +
+							'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<tableColumnGroup>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+							'<tableColumn columnWidth="50%"></tableColumn>' +
+						'</tableColumnGroup>' +
+					'</table>'
+				);
+
+				const initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector, 0 );
+
+				const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+				// In centered table, the change is doubled.
+				const widthChange = finalViewColumnWidthsPx[ 1 ] - initialViewColumnWidthsPx[ 1 ];
+
+				expect( Math.ceil( widthChange - mouseMovementVector.x * 2 ) ).to.approximately( 0, 1 );
+			} );
+
 			describe( 'nested table ', () => {
 				it( 'correctly shrinks when the last column is dragged to the left', () => {
 					// Test-specific.
 					const columnToResizeIndex = 1;
 					const mouseMovementVector = { x: -10, y: 0 };
 
-					setModelData( editor.model,
+					_setModelData( editor.model,
 						'<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -1665,7 +2044,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					assertViewPixelWidths( finalViewColumnWidthsPx, expectedViewColumnWidthsPx );
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.match(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.match(
 						new RegExp(
 							'<table tableWidth="100%">' +
 								'<tableRow>' +
@@ -1699,7 +2078,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const columnToResizeIndex = 1;
 					const mouseMovementVector = { x: 10, y: 0 };
 
-					setModelData( editor.model,
+					_setModelData( editor.model,
 						'<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -1754,7 +2133,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					assertViewPixelWidths( finalViewColumnWidthsPx, expectedViewColumnWidthsPx );
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.match(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.match(
 						new RegExp(
 							'<table tableWidth="100%">' +
 								'<tableRow>' +
@@ -1788,7 +2167,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const columnToResizeIndex = 1;
 					const mouseMovementVector = { x: 10, y: 0 };
 
-					setModelData( editor.model,
+					_setModelData( editor.model,
 						'<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -1847,7 +2226,7 @@ describe( 'TableColumnResizeEditing', () => {
 					);
 					assertViewPixelWidths( finalViewColumnWidthsPx, expectedViewColumnWidthsPx );
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.equal(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
 						'<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -1897,7 +2276,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'shrinks the first table column on dragging right', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '100%' } ) );
@@ -1931,7 +2310,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'expands the first table column on dragging left', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '100%' } ) );
@@ -1968,7 +2347,7 @@ describe( 'TableColumnResizeEditing', () => {
 				const columnToResizeIndex = 2;
 				const mouseMovementVector = { x: 10, y: 0 };
 
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '25%,25%,50%', tableWidth: '100%' } ) );
@@ -1999,7 +2378,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'does not remove column when it was shrinked to negative width', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2042,7 +2421,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'does not remove column when adjacent column was expanded over it', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2079,7 +2458,7 @@ describe( 'TableColumnResizeEditing', () => {
 		describe( 'if cursor was moved outside the table', () => {
 			it( 'resizes correctly if cursor was placed above the table', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2114,7 +2493,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'resizes correctly if cursor was placed under the table', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2149,7 +2528,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'resizes correctly if cursor was placed outside left table border', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2184,7 +2563,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'resizes correctly if cursor was placed outside right table border', () => {
 				// Test-specific.
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00', '01', '02' ],
 					[ '10', '11', '12' ]
 				], { columnWidths: '20%,25%,55%', tableWidth: '100%' } ) );
@@ -2222,19 +2601,19 @@ describe( 'TableColumnResizeEditing', () => {
 
 	describe( 'getTableColumnGroup()', () => {
 		it( 'should return tableColumnGroup when it exists', () => {
-			setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
+			_setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
 
 			expect( resizePlugin.getColumnGroupElement( model.document.getRoot().getChild( 0 ) ) ).to.not.be.undefined;
 		} );
 
 		it( 'should not return anything if tableColumnGroup does not exists', () => {
-			setModelData( model, modelTable( [ [ '01', '02' ] ] ) );
+			_setModelData( model, modelTable( [ [ '01', '02' ] ] ) );
 
 			expect( resizePlugin.getColumnGroupElement( model.document.getRoot().getChild( 0 ) ) ).to.be.undefined;
 		} );
 
 		it( 'should return the same tableColumnGroup element if it was passed as an argument', () => {
-			setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
+			_setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
 
 			const tableColumnGroup = model.document.getRoot().getChild( 0 ).getChild( 1 );
 
@@ -2244,7 +2623,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 	describe( 'getTableColumns()', () => {
 		it( 'should return tableColumn array when there are columns', () => {
-			setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
+			_setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
 
 			expect( resizePlugin.getTableColumnElements( model.document.getRoot().getChild( 0 ) ) ).to.have.length( 2 );
 		} );
@@ -2252,7 +2631,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 	describe( 'getTableColumnsWidths()', () => {
 		it( 'should return tableColumnGroup count when there are columns', () => {
-			setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
+			_setModelData( model, modelTable( [ [ '01', '02' ] ], { columnWidths: '50%,50%' } ) );
 
 			expect( resizePlugin.getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '50%', '50%' ] );
 		} );
@@ -2261,7 +2640,7 @@ describe( 'TableColumnResizeEditing', () => {
 	describe( 'in integration with', () => {
 		describe( 'undo', () => {
 			it( 'should resize correctly after undoing column insertion and resize', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '00[]', '01' ],
 					[ '10', '11' ]
 				] ) );
@@ -2309,7 +2688,7 @@ describe( 'TableColumnResizeEditing', () => {
 			describe( 'structure manipulation', () => {
 				describe( 'should adjust attributes in model', () => {
 					it( 'when new column was inserted at the beginning', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00[]', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,20%,60%', tableWidth: '50%' } ) );
@@ -2329,7 +2708,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when new column was inserted in the middle', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00[]', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,20%,60%', tableWidth: '50%' } ) );
@@ -2349,7 +2728,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when new column was inserted at the end', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01', '02[]' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,20%,60%', tableWidth: '50%' } ) );
@@ -2369,7 +2748,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when first column was removed', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00[]', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2390,7 +2769,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when middle column was removed', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01[]', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2411,7 +2790,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when last column was removed', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01', '02[]' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2432,7 +2811,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when two columns were merged', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2459,7 +2838,7 @@ describe( 'TableColumnResizeEditing', () => {
 					} );
 
 					it( 'when the whole table was merged', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2490,7 +2869,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 				describe( 'should not adjust `columnWidths` attribute in model', () => {
 					it( 'when only some cells from two columns were merged', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01', '02' ],
 							[ '10', '11', '12' ]
 						], { columnWidths: '20%,25%,55%' } ) );
@@ -2519,7 +2898,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 				describe( 'should not remove colgroup', () => {
 					it( 'after pasting a table that increases number of rows and columns at the same time', () => {
-						setModelData( model, modelTable( [
+						_setModelData( model, modelTable( [
 							[ '00', '01' ],
 							[ '10', '[11]' ]
 						], { columnWidths: '50%,50%' } ) );
@@ -2540,11 +2919,11 @@ describe( 'TableColumnResizeEditing', () => {
 
 			describe( 'tableWidth attribute', () => {
 				it( 'should not be set initially when creating a table', () => {
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '00', '01', '02' ]
 					], { columnWidths: '20%,25%,55%' } ) );
 
-					expect( getModelData( model ) ).to.equal(
+					expect( _getModelData( model ) ).to.equal(
 						'[<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2567,9 +2946,9 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 
 				it( 'should be set if table was initiated with a tableWidth value', () => {
-					setModelData( model, modelTable( [ [ '[]foo' ] ], { tableWidth: '100px' } ) );
+					_setModelData( model, modelTable( [ [ '[]foo' ] ], { tableWidth: '100px' } ) );
 
-					expect( getModelData( editor.model ) ).to.equal(
+					expect( _getModelData( editor.model ) ).to.equal(
 						'<table tableWidth="100px">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2584,7 +2963,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const columnToResizeIndex = 2;
 					const mouseMovementVector = { x: 10, y: 0 };
 
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '00', '01', '02' ]
 					] ) );
 
@@ -2592,7 +2971,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector );
 
-					expect( getModelData( model, { withoutSelection: true } ) ).to.match(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.match(
 						new RegExp(
 							'<table tableWidth="52\\.4[\\d]%">' +
 								'<tableRow>' +
@@ -2620,7 +2999,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const columnToResizeIndex = 2;
 					const mouseMovementVector = { x: 10, y: 0 };
 
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '00', '01', '02' ]
 					], { tableWidth: '100px', columnWidths: '25%,25%,50%' } ) );
 
@@ -2628,7 +3007,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					tableColumnResizeMouseSimulator.resize( editor, getDomTable( view ), columnToResizeIndex, mouseMovementVector );
 
-					expect( getModelData( editor.model ) ).to.equal(
+					expect( _getModelData( editor.model ) ).to.equal(
 						'[<table tableWidth="73.33%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2654,7 +3033,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const columnToResizeIndex = 1;
 					const mouseMovementVector = { x: 10, y: 0 };
 
-					setModelData( model, modelTable( [
+					_setModelData( model, modelTable( [
 						[ '[00', '01', '02]' ]
 					], { tableWidth: '40%', columnWidths: '25%,25%,50%' } ) );
 
@@ -2664,7 +3043,7 @@ describe( 'TableColumnResizeEditing', () => {
 					// In different tests it is handled by setting the particular editor and table width,
 					// but here we want to make sure that once set, `tableWidth` prop doesn't change,
 					// while the rest (column widths) is covered elsewhere not very important.
-					expect( getModelData( model, { withoutSelection: true } ) ).to.match(
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.match(
 						new RegExp(
 							'<table tableWidth="40%">' +
 								'<tableRow>' +
@@ -2717,7 +3096,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const linkCommand = editor.commands.get( 'link' );
 					const unlinkCommand = editor.commands.get( 'unlink' );
 
-					setModelData( model,
+					_setModelData( model,
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2736,7 +3115,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					unlinkCommand.execute();
 
-					expect( getModelData( model ) ).to.equal(
+					expect( _getModelData( model ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2753,7 +3132,7 @@ describe( 'TableColumnResizeEditing', () => {
 				it( 'when highlight is being removed', () => {
 					const highlightCommand = editor.commands.get( 'highlight' );
 
-					setModelData( model,
+					_setModelData( model,
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2772,7 +3151,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					highlightCommand.execute();
 
-					expect( getModelData( model ) ).to.equal(
+					expect( _getModelData( model ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2787,7 +3166,7 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 
 				it( 'when bold is being removed', () => {
-					setModelData( model,
+					_setModelData( model,
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2804,7 +3183,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					editor.commands.get( 'bold' ).execute();
 
-					expect( getModelData( model ) ).to.equal(
+					expect( _getModelData( model ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2822,7 +3201,7 @@ describe( 'TableColumnResizeEditing', () => {
 					const widgetToolbarRepository = editor.plugins.get( 'WidgetToolbarRepository' );
 					const toolbar = widgetToolbarRepository._toolbarDefinitions.get( 'tableContent' ).view;
 
-					setModelData( model,
+					_setModelData( model,
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2839,7 +3218,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					toolbar.items.get( 0 ).fire( 'execute' );
 
-					expect( getModelData( model ) ).to.equal(
+					expect( _getModelData( model ) ).to.equal(
 						'<table>' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2855,7 +3234,7 @@ describe( 'TableColumnResizeEditing', () => {
 				} );
 
 				it( 'when table is being removed', () => {
-					setModelData( model,
+					_setModelData( model,
 						'[<table tableWidth="100%">' +
 							'<tableRow>' +
 								'<tableCell>' +
@@ -2872,7 +3251,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 					model.deleteContent( model.document.selection );
 
-					expect( getModelData( model ) ).to.equal( '<paragraph>[]</paragraph>' );
+					expect( _getModelData( model ) ).to.equal( '<paragraph>[]</paragraph>' );
 				} );
 			} );
 
@@ -2945,7 +3324,7 @@ describe( 'TableColumnResizeEditing', () => {
 
 			it( 'should save and load data correctly', () => {
 				// (#12191)
-				setModelData( ghsEditor.model, modelTable( [
+				_setModelData( ghsEditor.model, modelTable( [
 					[ '[00', '01', '02]' ]
 				], { tableWidth: '80%', columnWidths: '25%,25%,50%' } ) );
 
@@ -2977,7 +3356,7 @@ describe( 'TableColumnResizeEditing', () => {
 					[ [ 'Some', 'Data' ] ],
 					{ columnWidths: '80%,20%', tableWidth: '100%' }
 				);
-				setModelData( ptoEditor.model, table );
+				_setModelData( ptoEditor.model, table );
 
 				expect( () => ptoEditor.getData() ).to.not.throw();
 			} );
@@ -2987,10 +3366,10 @@ describe( 'TableColumnResizeEditing', () => {
 					[ [ 'Some', 'Data' ] ],
 					{ columnWidths: '80%,20%', tableWidth: '100%' }
 				);
-				setModelData( ptoEditor.model, table );
+				_setModelData( ptoEditor.model, table );
 
 				expect( ptoEditor.getData() ).to.equal(
-					'<table class="ck-table-resized" style="width:100%;">' +
+					'<table class="table ck-table-resized" style="width:100%;">' +
 						'<colgroup>' +
 							'<col style="width:80%;">' +
 							'<col style="width:20%;">' +
@@ -3006,7 +3385,7 @@ describe( 'TableColumnResizeEditing', () => {
 			} );
 
 			it( 'should not scroll `tbody` inside `table` after scrolling to the selection in a cell.', () => {
-				setModelData( editor.model,
+				_setModelData( editor.model,
 					'<table tableWidth="100%">' +
 						'<tableRow>' +
 							'<tableCell>' +
@@ -3097,6 +3476,62 @@ describe( 'TableColumnResizeEditing', () => {
 		} );
 	} );
 
+	describe( 'resize threshold', () => {
+		let initialViewColumnWidthsPx;
+
+		beforeEach( () => {
+			_setModelData( model, modelTable( [
+				[ '00', '01', '02' ],
+				[ '10', '11', '12' ]
+			], { columnWidths: '20%,25%,55%', tableWidth: '500px' } ) );
+
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+
+			initialViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+		} );
+
+		it( 'should not start resizing when mouse movement is below threshold', () => {
+			tableColumnResizeMouseSimulator.down( editor, getDomResizer( getDomTable( view ), 0, 0 ), { ignoreThreshold: false } );
+			tableColumnResizeMouseSimulator.move(
+				editor,
+				getDomResizer( getDomTable( view ), 0, 0 ),
+				{ x: COLUMN_RESIZE_DISTANCE_THRESHOLD - 1, y: 0 }
+			);
+
+			const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+			expect( finalViewColumnWidthsPx ).to.deep.equal( initialViewColumnWidthsPx );
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+		} );
+
+		it( 'should start resizing when mouse movement reaches threshold', () => {
+			tableColumnResizeMouseSimulator.down( editor, getDomResizer( getDomTable( view ), 0, 0 ), { ignoreThreshold: false } );
+			tableColumnResizeMouseSimulator.move(
+				editor,
+				getDomResizer( getDomTable( view ), 0, 0 ),
+				{ x: COLUMN_RESIZE_DISTANCE_THRESHOLD, y: 0 }
+			);
+
+			const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+			expect( finalViewColumnWidthsPx ).to.not.deep.equal( initialViewColumnWidthsPx );
+			expect( resizePlugin._isResizingActive ).to.be.true;
+		} );
+
+		it( 'should not start resizing after mouseup even at threshold distance', () => {
+			tableColumnResizeMouseSimulator.down( editor, getDomResizer( getDomTable( view ), 0, 0 ), { ignoreThreshold: false } );
+			tableColumnResizeMouseSimulator.up( editor );
+			tableColumnResizeMouseSimulator.move( editor, getDomResizer( getDomTable( view ), 0, 0 ), { x: 10, y: 0 } );
+
+			const finalViewColumnWidthsPx = getViewColumnWidthsPx( getDomTable( view ) );
+
+			expect( finalViewColumnWidthsPx ).to.deep.equal( initialViewColumnWidthsPx );
+			expect( resizePlugin._isResizingActive ).to.be.false;
+			expect( getTableColumnsWidths( model.document.getRoot().getChild( 0 ) ) ).to.deep.equal( [ '20%', '25%', '55%' ] );
+		} );
+	} );
+
 	async function createEditor( configCustomization, additionalPlugins ) {
 		const plugins = [ Table, TableColumnResize, TableColumnResizeEditing, Paragraph, WidgetResize, Undo, ClipboardPipeline ];
 
@@ -3180,7 +3615,7 @@ describe( 'TableColumnResizeEditing', () => {
 	// we set editor width so the % values don't depend on browser width anymore.
 	//
 	// @param {module:core/editor/editor~Editor} editor
-	// @param {module:engine/view/element~Element} [viewTable]
+	// @param {module:engine/view/element~ViewElement} [viewTable]
 	// @param {Number} [tableWidth]
 	// @param {Number} [editorWidth]
 	function setInitialWidthsInPx( editor, viewTable, tableWidth, editorWidth ) {

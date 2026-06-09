@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
@@ -10,12 +10,12 @@
 import type {
 	DowncastDispatcher,
 	DowncastInsertEvent,
-	Element,
+	ModelElement,
 	UpcastDispatcher,
 	UpcastElementEvent,
 	ViewElement
-} from 'ckeditor5/src/engine.js';
-import type TableUtils from '../tableutils.js';
+} from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../tableutils.js';
 import {
 	normalizeColumnWidths,
 	updateColumnElements,
@@ -27,6 +27,8 @@ import {
 /**
  * Returns a upcast helper that ensures the number of `<tableColumn>` elements corresponds to the actual number of columns in the table,
  * because the input data might have too few or too many <col> elements.
+ *
+ * @internal
  */
 export function upcastColgroupElement( tableUtilsPlugin: TableUtils ): ( dispatcher: UpcastDispatcher ) => void {
 	return dispatcher => dispatcher.on<UpcastElementEvent>( 'element:colgroup', ( evt, data, conversionApi ) => {
@@ -52,11 +54,13 @@ export function upcastColgroupElement( tableUtilsPlugin: TableUtils ): ( dispatc
 
 /**
  * Returns downcast helper for adding `ck-table-resized` class if there is a `<tableColumnGroup>` element inside the table.
+ *
+ * @internal
  */
 export function downcastTableResizedClass(): ( dispatcher: DowncastDispatcher ) => void {
 	return dispatcher => dispatcher.on<DowncastInsertEvent>( 'insert:table', ( evt, data, conversionApi ) => {
 		const viewWriter = conversionApi.writer;
-		const modelTable = data.item as Element;
+		const modelTable = data.item as ModelElement;
 		const viewElement: ViewElement = conversionApi.mapper.toViewElement( modelTable )!;
 
 		const viewTable = viewElement.is( 'element', 'table' ) ?
@@ -71,4 +75,17 @@ export function downcastTableResizedClass(): ( dispatcher: DowncastDispatcher ) 
 			viewWriter.removeClass( 'ck-table-resized', viewTable as ViewElement );
 		}
 	}, { priority: 'low' } );
+}
+
+/**
+ * Returns a upcast helper that removes the `ck-table-resized` class from the table element.
+ *
+ * @internal
+ */
+export function upcastTableResizedClass(): ( dispatcher: UpcastDispatcher ) => void {
+	return ( dispatcher: UpcastDispatcher ): void => {
+		dispatcher.on<UpcastElementEvent>( 'element:table', ( evt, data, conversionApi ) => {
+			conversionApi.consumable.consume( data.viewItem, { classes: 'ck-table-resized' } );
+		} );
+	};
 }

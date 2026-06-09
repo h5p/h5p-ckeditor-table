@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import { global } from '@ckeditor/ckeditor5-utils';
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
 
-import TableEditing from '../src/tableediting.js';
-import TableProperties from '../src/tableproperties.js';
-import TablePropertiesEditing from '../src/tableproperties/tablepropertiesediting.js';
+import { TableEditing } from '../src/tableediting.js';
+import { TableProperties } from '../src/tableproperties.js';
+import { TablePropertiesEditing } from '../src/tableproperties/tablepropertiesediting.js';
 
 describe( 'table properties', () => {
 	describe( 'TableProperties', () => {

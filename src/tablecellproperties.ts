@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellproperties
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
+import { Plugin } from '@ckeditor/ckeditor5-core';
 
-import TableCellPropertiesUI from './tablecellproperties/tablecellpropertiesui.js';
-import TableCellPropertiesEditing from './tablecellproperties/tablecellpropertiesediting.js';
+import { TableCellPropertiesUI } from './tablecellproperties/tablecellpropertiesui.js';
+import { TableCellPropertiesEditing } from './tablecellproperties/tablecellpropertiesediting.js';
 
 /**
  * The table cell properties feature. Enables support for setting properties of table cells (size, border, background, etc.).
@@ -22,7 +22,7 @@ import TableCellPropertiesEditing from './tablecellproperties/tablecellpropertie
  * {@link module:table/tablecellproperties/tablecellpropertiesediting~TableCellPropertiesEditing table cell properties editing feature} and
  * the {@link module:table/tablecellproperties/tablecellpropertiesui~TableCellPropertiesUI table cell properties UI feature}.
  */
-export default class TableCellProperties extends Plugin {
+export class TableCellProperties extends Plugin {
 	/**
 	 * @inheritDoc
 	 */

@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/converters/table-caption-post-fixer
  */
 
-import type { Model, Writer, Element, Node } from 'ckeditor5/src/engine.js';
+import type { Model, ModelWriter, ModelElement, ModelNode } from '@ckeditor/ckeditor5-engine';
 
 /**
  * Injects a table caption post-fixer into the model.
@@ -19,15 +19,17 @@ import type { Model, Writer, Element, Node } from 'ckeditor5/src/engine.js';
  *
  * * If there are many caption model element, they are merged into one model.
  * * A final, merged caption model is placed at the end of the table.
+ *
+ * @internal
  */
-export default function injectTableCaptionPostFixer( model: Model ): void {
+export function injectTableCaptionPostFixer( model: Model ): void {
 	model.document.registerPostFixer( writer => tableCaptionPostFixer( writer, model ) );
 }
 
 /**
  * The table caption post-fixer.
  */
-function tableCaptionPostFixer( writer: Writer, model: Model ) {
+function tableCaptionPostFixer( writer: ModelWriter, model: Model ) {
 	const changes = model.document.differ.getChanges();
 	let wasFixed = false;
 
@@ -39,9 +41,9 @@ function tableCaptionPostFixer( writer: Writer, model: Model ) {
 		const positionParent = entry.position.parent;
 
 		if ( positionParent.is( 'element', 'table' ) || entry.name == 'table' ) {
-			const table = ( entry.name == 'table' ? entry.position.nodeAfter : positionParent ) as Element;
+			const table = ( entry.name == 'table' ? entry.position.nodeAfter : positionParent ) as ModelElement;
 			const captionsToMerge = Array.from( table.getChildren() )
-				.filter( ( child: Node ): child is Element => child.is( 'element', 'caption' ) );
+				.filter( ( child: ModelNode ): child is ModelElement => child.is( 'element', 'caption' ) );
 			const firstCaption = captionsToMerge.shift();
 
 			if ( !firstCaption ) {

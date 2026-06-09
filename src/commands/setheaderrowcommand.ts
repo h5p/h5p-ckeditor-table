@@ -1,17 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/commands/setheaderrowcommand
  */
 
-import { Command } from 'ckeditor5/src/core.js';
-import type { Element } from 'ckeditor5/src/engine.js';
-import type TableUtils from '../tableutils.js';
+import { Command } from '@ckeditor/ckeditor5-core';
+import type { ModelElement } from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../tableutils.js';
 
-import { updateNumericAttribute } from '../utils/common.js';
 import { getVerticallyOverlappingCells, splitHorizontally } from '../utils/structure.js';
 
 /**
@@ -28,10 +27,10 @@ import { getVerticallyOverlappingCells, splitHorizontally } from '../utils/struc
  * **Note:** All preceding rows will also become headers. If the current row is already a header, executing this command
  * will make it a regular row back again (including the following rows).
  */
-export default class SetHeaderRowCommand extends Command {
+export class SetHeaderRowCommand extends Command {
 	/**
 	 * Flag indicating whether the command is active. The command is active when the
-	 * {@link module:engine/model/selection~Selection} is in a header row.
+	 * {@link module:engine/model/selection~ModelSelection} is in a header row.
 	 *
 	 * @observable
 	 */
@@ -43,11 +42,20 @@ export default class SetHeaderRowCommand extends Command {
 	public override refresh(): void {
 		const tableUtils: TableUtils = this.editor.plugins.get( 'TableUtils' );
 		const model = this.editor.model;
-		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
-		const isInTable = selectedCells.length > 0;
 
-		this.isEnabled = isInTable;
-		this.value = isInTable && selectedCells.every( cell => this._isInHeading( cell, cell.parent!.parent as Element ) );
+		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
+
+		if ( selectedCells.length === 0 ) {
+			this.isEnabled = false;
+			this.value = false;
+
+			return;
+		}
+
+		const table = selectedCells[ 0 ].findAncestor( 'table' )!;
+
+		this.isEnabled = model.schema.checkAttribute( table, 'headingRows' );
+		this.value = selectedCells.every( cell => this._isInHeading( cell, cell.parent!.parent as ModelElement ) );
 	}
 
 	/**
@@ -88,16 +96,16 @@ export default class SetHeaderRowCommand extends Command {
 				}
 			}
 
-			updateNumericAttribute( 'headingRows', headingRowsToSet, table, writer, 0 );
+			tableUtils.setHeadingRowsCount( writer, table, headingRowsToSet );
 		} );
 	}
 
 	/**
 	 * Checks if a table cell is in the heading section.
 	 */
-	private _isInHeading( tableCell: Element, table: Element ): boolean {
+	private _isInHeading( tableCell: ModelElement, table: ModelElement ): boolean {
 		const headingRows = parseInt( table.getAttribute( 'headingRows' ) as string || '0' );
 
-		return !!headingRows && ( tableCell.parent as Element ).index! < headingRows;
+		return !!headingRows && ( tableCell.parent as ModelElement ).index! < headingRows;
 	}
 }

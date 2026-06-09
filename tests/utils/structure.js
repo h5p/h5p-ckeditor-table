@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
-import TableEditing from '../../src/tableediting.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { VirtualTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
+import { TableEditing } from '../../src/tableediting.js';
 
-import { setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+import { _setModelData, _stringifyModel } from '@ckeditor/ckeditor5-engine';
 import { modelTable } from '../_utils/utils.js';
-import { getHorizontallyOverlappingCells, getVerticallyOverlappingCells } from '../../src/utils/structure.js';
+import { cropTableToDimensions, getHorizontallyOverlappingCells, getVerticallyOverlappingCells } from '../../src/utils/structure.js';
 
 describe( 'table utils', () => {
 	let editor, model, modelRoot;
@@ -43,7 +43,7 @@ describe( 'table utils', () => {
 				// +    +    +----+----+----+
 				// |    |    | 42 | 43 | 44 |
 				// +----+----+----+----+----+
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ { contents: '00', rowspan: 5 }, { contents: '01', rowspan: 3 }, '02', { contents: '03', rowspan: 2 }, '04' ],
 					[ { contents: '12', rowspan: 3 }, '14' ],
 					[ { contents: '23', rowspan: 2 }, '24' ],
@@ -90,7 +90,7 @@ describe( 'table utils', () => {
 				// +----+----+----+----+----+
 				// | 40 | 41 | 42 | 43 | 44 |
 				// +----+----+----+----+----+
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ { contents: '00', colspan: 5 } ],
 					[ { contents: '10', colspan: 3 }, { contents: '13', colspan: 2 } ],
 					[ '20', { contents: '21', colspan: 3 }, '24' ],
@@ -113,6 +113,47 @@ describe( 'table utils', () => {
 				expect( cellsInfo[ 0 ].cell ).to.equal( modelRoot.getNodeByPath( [ 0, 0, 0 ] ) ); // Cell 00
 				expect( cellsInfo[ 1 ].cell ).to.equal( modelRoot.getNodeByPath( [ 0, 1, 0 ] ) ); // Cell 10
 				expect( cellsInfo[ 2 ].cell ).to.equal( modelRoot.getNodeByPath( [ 0, 2, 1 ] ) ); // Cell 21
+			} );
+		} );
+
+		describe( 'cropTableToDimensions()', () => {
+			it( 'coverage for addFootersToCroppedTable()', () => {
+				editor.model.schema.register( 'foo', { allowIn: 'table' } );
+				editor.conversion.elementToElement( { model: 'foo', view: 'foo' } );
+
+				_setModelData( model,
+					'<table footerRows="1">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>00</paragraph></tableCell>' +
+							'<tableCell><paragraph>01</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<tableRow>' +
+							'<tableCell><paragraph>10</paragraph></tableCell>' +
+							'<tableCell><paragraph>11</paragraph></tableCell>' +
+						'</tableRow>' +
+						'<foo></foo>' +
+					'</table>'
+				);
+
+				const table = modelRoot.getChild( 0 );
+				let result;
+
+				model.change( writer => {
+					result = cropTableToDimensions( table, {
+						startRow: 1,
+						startColumn: 1,
+						endRow: 1,
+						endColumn: 1
+					}, writer );
+				} );
+
+				expect( _stringifyModel( result ) ).to.equal(
+					'<table footerRows="1">' +
+						'<tableRow>' +
+							'<tableCell><paragraph>11</paragraph></tableCell>' +
+						'</tableRow>' +
+					'</table>'
+				);
 			} );
 		} );
 	} );

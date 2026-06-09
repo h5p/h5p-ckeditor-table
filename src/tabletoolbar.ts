@@ -1,14 +1,14 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tabletoolbar
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
-import { WidgetToolbarRepository } from 'ckeditor5/src/widget.js';
+import { Plugin } from '@ckeditor/ckeditor5-core';
+import { WidgetToolbarRepository } from '@ckeditor/ckeditor5-widget';
 import { getSelectedTableWidget, getTableWidgetAncestor } from './utils/ui/widget.js';
 
 /**
@@ -20,7 +20,7 @@ import { getSelectedTableWidget, getTableWidgetAncestor } from './utils/ui/widge
  * Table content toolbar shows up when the selection is inside the content of a table. It creates its component based on the
  * {@link module:table/tableconfig~TableConfig#contentToolbar `table.contentToolbar` configuration option}.
  */
-export default class TableToolbar extends Plugin {
+export class TableToolbar extends Plugin {
 	/**
 	 * @inheritDoc
 	 */

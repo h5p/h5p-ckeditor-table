@@ -1,44 +1,44 @@
 ---
 menu-title: Styling tables
 meta-title: Table and cell styling tools | CKEditor 5 Documentation
+meta-description: Style tables in CKEditor 5 with custom classes, alignment, and formatting options to match your document’s design and improve readability.
 category: tables
-order: 30
-modified_at: 2022-05-19
+order: 20
+modified_at: 2026-01-08
+badges: [ premium ]
 ---
 
 # Table and cell styling tools
 
-{@snippet features/build-table-source}
+{@snippet features/build-table-source empty}
 
 CKEditor&nbsp;5 comes with some additional tools that help you change the look of tables and table cells. You can control border color and style, background color, padding, or text alignment.
 
+{@snippet getting-started/unlock-feature}
+
 ## Demo
 
-Put the caret anywhere inside the table to open the table toolbar. Click the table properties button {@icon @ckeditor/ckeditor5-table/theme/icons/table-properties.svg Table properties} in the toolbar. A pop–up will open with options to shape the look of the entire table. The cell properties button {@icon @ckeditor/ckeditor5-table/theme/icons/table-cell-properties.svg Cell properties} gives you access to styling options for individual table cells.
+Put the caret anywhere inside the table to open the table toolbar. Click the table properties button {@icon @ckeditor/ckeditor5-icons/theme/icons/table-properties.svg Table properties} in the toolbar. A pop–up will open with options to shape the look of the entire table. The cell properties button {@icon @ckeditor/ckeditor5-icons/theme/icons/table-cell-properties.svg Cell properties} gives you access to styling options for individual table cells.
 
 [Learn more](#configuring-styling-tools) about configuring color palettes in the table styling pop–up interfaces.
 
 {@snippet features/table-styling}
 
-<info-box info>
+<snippet-footer>
 	This demo presents a limited set of features. Visit the {@link examples/builds/full-featured-editor feature-rich editor example} to see more in action.
-</info-box>
+</snippet-footer>
 
 ## Installation
 
-<info-box info>
-	⚠️ **New import paths**
+After {@link getting-started/integrations-cdn/quick-start installing the editor}, add the feature to your plugin list and toolbar configuration:
 
-	Starting with {@link updating/update-to-42 version 42.0.0}, we changed the format of import paths. This guide uses the new, shorter format. Refer to the {@link getting-started/legacy-getting-started/legacy-imports Packages in the legacy setup} guide if you use an older version of CKEditor&nbsp;5.
-</info-box>
-
-After {@link getting-started/quick-start installing the editor}, add the feature to your plugin list and toolbar configuration:
-
+<code-switcher>
 ```js
 import { ClassicEditor, Table, TableCellProperties, TableProperties, TableToolbar } from 'ckeditor5';
 
 ClassicEditor
-	.create( document.querySelector( '#editor' ), {
+	.create( {
+		licenseKey: '<YOUR_LICENSE_KEY>', // Or 'GPL'.
 		plugins: [ Table, TableToolbar, TableProperties, TableCellProperties, /* ... */ ],
 		toolbar: [ 'insertTable', /* ... */ ],
 		table: {
@@ -49,26 +49,25 @@ ClassicEditor
 
 			tableProperties: {
 				// The configuration of the TableProperties plugin.
-				// ...
 			},
 
 			tableCellProperties: {
 				// The configuration of the TableCellProperties plugin.
-				// ...
 			}
 		}
 	} )
 	.then( /* ... */ )
 	.catch( /* ... */ );
 ```
+</code-switcher>
 
 ## Configuring styling tools
 
-Table and cell styling tools let you create tables with colorful backgrounds and borders. These colors can be picked using color palettes in the table properties {@icon @ckeditor/ckeditor5-table/theme/icons/table-properties.svg Table properties} and cell properties {@icon @ckeditor/ckeditor5-table/theme/icons/table-cell-properties.svg Cell properties} pop-ups. To help users choose the right colors for the content, you can pre-configure such color palettes, like in the editor below:
+Table and cell styling tools let you create tables with colorful backgrounds and borders. These colors can be picked using color palettes in the table properties {@icon @ckeditor/ckeditor5-icons/theme/icons/table-properties.svg Table properties} and cell properties {@icon @ckeditor/ckeditor5-icons/theme/icons/table-cell-properties.svg Cell properties} pop-ups. To help users choose the right colors for the content, you can pre-configure such color palettes, like in the editor below:
 
 {@snippet features/table-styling-colors}
 
-With the selection inside any table cell, use the table properties {@icon @ckeditor/ckeditor5-table/theme/icons/table-properties.svg Table properties} and cell properties {@icon @ckeditor/ckeditor5-table/theme/icons/table-cell-properties.svg Cell properties} buttons in the toolbar to check available styling and color options.
+With the selection inside any table cell, use the table properties {@icon @ckeditor/ckeditor5-icons/theme/icons/table-properties.svg Table properties} and cell properties {@icon @ckeditor/ckeditor5-icons/theme/icons/table-cell-properties.svg Cell properties} buttons in the toolbar to check available styling and color options.
 
 ### Customizing color palettes
 
@@ -117,9 +116,8 @@ const customColorPalette = [
 ];
 
 ClassicEditor
-	.create( document.querySelector( '#editor' ), {
-		plugins: [ Table, TableToolbar, TableProperties, TableCellProperties, Bold, /* ... */ ],
-		toolbar: [ 'insertTable', /* ... */ ],
+	.create( {
+		// ... Other configuration options ...
 		table: {
 			contentToolbar: [
 				'tableColumn', 'tableRow', 'mergeTableCells',
@@ -145,26 +143,29 @@ ClassicEditor
 
 ### Default table and table cell styles
 
-The table styles feature allows for configuring the default look of the tables in the editor. The configuration object should be synchronized with the {@link getting-started/advanced/content-styles editor content styles}.
+The table styles feature allows for configuring the default look of the tables in the editor. The configuration object should be synchronized with the {@link getting-started/setup/css editor content styles}.
 
 The **“Table properties”** and **“Table cell properties”** buttons in the toolbar will show the table and table cell properties applied to the table or table cells.
 
 The style sheet for the editor displayed below looks as follows:
 
 ```css
-.ck-content .table {
+.ck-content figure.table:not(.layout-table) {
 	float: left;
 	width: 550px;
 	height: 450px;
 }
 
-.ck-content .table table {
+.ck-content figure.table:not(.layout-table) > table {
 	border-style: dashed;
 	border-color: hsl(90, 75%, 60%);
 	border-width: 3px;
 }
 
-.ck-content .table table td {
+.ck-content figure.table:not(.layout-table) > table  > tbody > tr > td,
+.ck-content figure.table:not(.layout-table) > table  > tbody > tr > th,
+.ck-content figure.table:not(.layout-table) > table  > thead > tr > td,
+.ck-content figure.table:not(.layout-table) > table  > thead > tr > th {
 	text-align: center;
 	vertical-align: bottom;
 	padding: 10px
@@ -190,14 +191,14 @@ const tableConfig = {
 				width: '550px',
 				height: '450px'
 			},
-			// The default styles for table cells in the editor.
-			// They should be synchronized with the content styles.
+		},
+		// The default styles for table cells in the editor.
+		// They should be synchronized with the content styles.
 		tableCellProperties: {
 			defaultProperties: {
 				horizontalAlignment: 'center',
 				verticalAlignment: 'bottom',
 				padding: '10px'
-			}
 			}
 		}
 	}
@@ -217,6 +218,26 @@ Read more about all supported properties for the {@link module:table/tableconfig
 <info-box>
 	The default table and table cell styles **do** impact the {@link getting-started/setup/getting-and-setting-data#replacing-the-editor-data-with-setdata data loaded into the editor}. Default properties will not be kept in the editor model.
 </info-box>
+
+### Helper lines when border style is set to none
+
+By default, when a table or table cell has an inline style such as `border: none` or `border-style: none`, the editor displays a dashed helper line to visually indicate the hidden border. This visualization is applied only in the editing view and does not affect the output HTML or the data stored by CKEditor&nbsp;5.
+
+The effect looks as follows:
+
+{@img assets/img/table-no-border.png 520 A table with borders set to none and helper lines.}
+
+If you prefer a true WYSIWYG experience or already implement your own border visualization logic, this behavior can be disabled using the {@link module:table/tableconfig~TableConfig#showHiddenBorders `table.showHiddenBorders`} configuration option.
+
+```js
+const tableConfig = {
+	table: {
+		showHiddenBorders: false
+	}
+};
+```
+
+When disabled, tables and cells with `border: none` will remain completely borderless in the editing view, matching their rendered output.
 
 ## Common API
 

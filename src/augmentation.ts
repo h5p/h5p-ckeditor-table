@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 import type {
@@ -21,6 +21,8 @@ import type {
 	TableColumnResizeEditing,
 	TableEditing,
 	TableKeyboard,
+	TableLayout,
+	TableLayoutEditing,
 	TableMouse,
 	TableProperties,
 	TablePropertiesEditing,
@@ -35,6 +37,7 @@ import type {
 	InsertColumnCommand,
 	InsertRowCommand,
 	InsertTableCommand,
+	InsertTableLayoutCommand,
 	MergeCellCommand,
 	MergeCellsCommand,
 	RemoveColumnCommand,
@@ -43,6 +46,7 @@ import type {
 	SelectRowCommand,
 	SetHeaderColumnCommand,
 	SetHeaderRowCommand,
+	TableTypeCommand,
 	SplitCellCommand,
 	ToggleTableCaptionCommand,
 	TableCellBackgroundColorCommand,
@@ -60,7 +64,9 @@ import type {
 	TableBorderStyleCommand,
 	TableBorderWidthCommand,
 	TableHeightCommand,
-	TableWidthCommand
+	TableWidthCommand,
+	TableCellTypeCommand,
+	SetFooterRowCommand
 } from './index.js';
 
 declare module '@ckeditor/ckeditor5-core' {
@@ -88,6 +94,8 @@ declare module '@ckeditor/ckeditor5-core' {
 		[ TableColumnResizeEditing.pluginName ]: TableColumnResizeEditing;
 		[ TableEditing.pluginName ]: TableEditing;
 		[ TableKeyboard.pluginName ]: TableKeyboard;
+		[ TableLayout.pluginName ]: TableLayout;
+		[ TableLayoutEditing.pluginName ]: TableLayoutEditing;
 		[ TableMouse.pluginName ]: TableMouse;
 		[ TableProperties.pluginName ]: TableProperties;
 		[ TablePropertiesEditing.pluginName ]: TablePropertiesEditing;
@@ -105,6 +113,7 @@ declare module '@ckeditor/ckeditor5-core' {
 		insertTableRowAbove: InsertRowCommand;
 		insertTableRowBelow: InsertRowCommand;
 		insertTable: InsertTableCommand;
+		insertTableLayout: InsertTableLayoutCommand;
 		mergeTableCellRight: MergeCellCommand;
 		mergeTableCellLeft: MergeCellCommand;
 		mergeTableCellDown: MergeCellCommand;
@@ -116,6 +125,7 @@ declare module '@ckeditor/ckeditor5-core' {
 		selectTableRow: SelectRowCommand;
 		setTableColumnHeader: SetHeaderColumnCommand;
 		setTableRowHeader: SetHeaderRowCommand;
+		setTableFooterRow: SetFooterRowCommand;
 		splitTableCellVertically: SplitCellCommand;
 		splitTableCellHorizontally: SplitCellCommand;
 		toggleTableCaption: ToggleTableCaptionCommand;
@@ -128,6 +138,7 @@ declare module '@ckeditor/ckeditor5-core' {
 		tableCellPadding: TableCellPaddingCommand;
 		tableCellVerticalAlignment: TableCellVerticalAlignmentCommand;
 		tableCellWidth: TableCellWidthCommand;
+		tableCellType: TableCellTypeCommand;
 		tableAlignment: TableAlignmentCommand;
 		tableBackgroundColor: TableBackgroundColorCommand;
 		tableBorderColor: TableBorderColorCommand;
@@ -135,5 +146,6 @@ declare module '@ckeditor/ckeditor5-core' {
 		tableBorderWidth: TableBorderWidthCommand;
 		tableHeight: TableHeightCommand;
 		tableWidth: TableWidthCommand;
+		tableType: TableTypeCommand;
 	}
 }

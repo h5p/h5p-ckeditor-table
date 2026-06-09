@@ -1,23 +1,20 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* globals document */
-
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
 import {
-	getData as getModelData,
-	setData as setModelData,
-	stringify as stringifyModel
-} from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+	_getModelData,
+	_setModelData,
+	_stringifyModel,
+	ModelDocumentFragment } from '@ckeditor/ckeditor5-engine';
 
-import TableEditing from '../src/tableediting.js';
-import TableSelection from '../src/tableselection.js';
+import { TableEditing } from '../src/tableediting.js';
+import { TableSelection } from '../src/tableselection.js';
 import { assertSelectedCells, modelTable } from './_utils/utils.js';
-import DocumentFragment from '@ckeditor/ckeditor5-engine/src/model/documentfragment.js';
-import Typing from '@ckeditor/ckeditor5-typing/src/typing.js';
+import { Typing } from '@ckeditor/ckeditor5-typing';
 
 describe( 'TableSelection', () => {
 	let editorElement, editor, model, tableSelection, modelRoot;
@@ -39,7 +36,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '11[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -115,7 +112,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '11[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -198,7 +195,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '11[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -215,7 +212,7 @@ describe( 'TableSelection', () => {
 				modelRoot.getNodeByPath( [ 0, 1, 1 ] )
 			);
 
-			expect( tableSelection.getSelectionAsFragment() ).to.be.instanceOf( DocumentFragment );
+			expect( tableSelection.getSelectionAsFragment() ).to.be.instanceOf( ModelDocumentFragment );
 		} );
 
 		it( 'should return cells in the source order in case of forward selection', () => {
@@ -224,7 +221,7 @@ describe( 'TableSelection', () => {
 				modelRoot.getNodeByPath( [ 0, 1, 1 ] )
 			);
 
-			expect( stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
+			expect( _stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
 				[ '11', '12' ],
 				[ '21', '22' ]
 			] ) );
@@ -238,7 +235,7 @@ describe( 'TableSelection', () => {
 
 			expect( editor.model.document.selection.isBackward ).to.be.true;
 
-			expect( stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
+			expect( _stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
 				[ '11', '12' ],
 				[ '21', '22' ]
 			] ) );
@@ -252,7 +249,7 @@ describe( 'TableSelection', () => {
 			// +    +    +----+
 			// |    |    | 22 |
 			// +----+----+----+
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ { contents: '10', rowspan: 2 }, { contents: '11', rowspan: 2 }, '12' ],
 				[ '22' ]
@@ -270,7 +267,7 @@ describe( 'TableSelection', () => {
 			// +    +    +
 			// |    |    |
 			// +----+----+
-			expect( stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
+			expect( _stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
 				[ '00', '01' ],
 				[ { contents: '10', rowspan: 2 }, { contents: '11', rowspan: 2 } ],
 				[] // This is an empty row that should be here to properly handle pasting of this table fragment.
@@ -285,7 +282,7 @@ describe( 'TableSelection', () => {
 			// +----+----+----+
 			// | 20 | 21 | 22 |
 			// +----+----+----+
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', { contents: '01', colspan: 2 } ],
 				[ '10', { contents: '11', colspan: 2 } ],
 				[ '20', '21', '22' ]
@@ -301,7 +298,7 @@ describe( 'TableSelection', () => {
 			// +----+----+----+
 			// | 10 | 11      |
 			// +----+----+----+
-			expect( stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
+			expect( _stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
 				[ '00', { contents: '01', colspan: 2 } ],
 				[ '10', { contents: '11', colspan: 2 } ]
 			] ) );
@@ -315,7 +312,7 @@ describe( 'TableSelection', () => {
 			// +    +----+----+
 			// |    | 21 | 22 |
 			// +----+----+----+
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', { contents: '01', colspan: 2 } ],
 				[ { contents: '10', rowspan: 2 }, '11', '12' ],
 				[ '21', '22' ]
@@ -331,7 +328,7 @@ describe( 'TableSelection', () => {
 			// +----+----+
 			// | 10 | 11 |
 			// +----+----+
-			expect( stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
+			expect( _stringifyModel( tableSelection.getSelectionAsFragment() ) ).to.equal( modelTable( [
 				[ '00', '01' ],
 				[ '10', '11' ]
 			] ) );
@@ -345,7 +342,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '11[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -360,7 +357,7 @@ describe( 'TableSelection', () => {
 
 			editor.execute( 'delete' );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '', '', '13' ],
 				[ '', '[]', '23' ],
 				[ '31', '32', '33' ]
@@ -375,7 +372,7 @@ describe( 'TableSelection', () => {
 
 			editor.execute( 'delete' );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '', '', '13' ],
 				[ '', '[]', '23' ],
 				[ '31', '32', '33' ]
@@ -390,7 +387,7 @@ describe( 'TableSelection', () => {
 
 			editor.execute( 'deleteForward' );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '[]', '12', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -407,7 +404,7 @@ describe( 'TableSelection', () => {
 				model.deleteContent( model.document.selection );
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '', '', '13' ],
 				[ '', '[]', '23' ],
 				[ '31', '32', '33' ]
@@ -431,7 +428,7 @@ describe( 'TableSelection', () => {
 				writer.setSelection( selection );
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '', '[]', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -457,7 +454,7 @@ describe( 'TableSelection', () => {
 				writer.setSelection( selection );
 			} );
 
-			expect( getModelData( model ) ).to.equalMarkup( modelTable( [
+			expect( _getModelData( model ) ).to.equalMarkup( modelTable( [
 				[ '[]', '', '13' ],
 				[ '21', '22', '23' ],
 				[ '31', '32', '33' ]
@@ -472,7 +469,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '[]00', '01', '02' ],
 				[ '10', '11', '12' ],
 				[ '20', '21', '22' ]
@@ -513,7 +510,7 @@ describe( 'TableSelection', () => {
 			modelRoot = model.document.getRoot();
 			tableSelection = editor.plugins.get( TableSelection );
 
-			setModelData( model, modelTable( [
+			_setModelData( model, modelTable( [
 				[ '00', '01', '02' ],
 				[ '10', '11', '12' ],
 				[ '20', '21', '22' ]
@@ -568,6 +565,28 @@ describe( 'TableSelection', () => {
 			expect( tableSelection.getFocusCell() ).to.equal( focusCell );
 			expect( tableSelection.getAnchorCell() ).to.equal( anchorCell );
 			expect( selection.isBackward ).to.be.true;
+		} );
+
+		it( 'should select all cells when selecting from a regular row to a row with colspan', () => {
+			_setModelData( model, modelTable( [
+				[ '00', '01', '02' ],
+				[ { contents: '11', colspan: 3 } ]
+			] ) );
+
+			table = modelRoot.getChild( 0 );
+
+			const anchorCell = table.getChild( 0 ).getChild( 0 );
+			const targetCell = table.getChild( 1 ).getChild( 0 );
+
+			tableSelection.setCellSelection( anchorCell, targetCell );
+
+			const selectedCells = tableSelection.getSelectedTableCells();
+
+			expect( selectedCells ).to.have.length( 4 );
+			expect( selectedCells[ 0 ] ).to.equal( table.getChild( 0 ).getChild( 0 ) );
+			expect( selectedCells[ 1 ] ).to.equal( table.getChild( 0 ).getChild( 1 ) );
+			expect( selectedCells[ 2 ] ).to.equal( table.getChild( 0 ).getChild( 2 ) );
+			expect( selectedCells[ 3 ] ).to.equal( table.getChild( 1 ).getChild( 0 ) );
 		} );
 
 		function assertSelection( anchorCell, focusCell, count ) {

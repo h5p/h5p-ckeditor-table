@@ -1,24 +1,31 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import { VirtualTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { ImageBlockEditing, ImageResizeEditing } from '@ckeditor/ckeditor5-image';
+import { ClipboardPipeline } from '@ckeditor/ckeditor5-clipboard';
 
-import TableEditing from '../../src/tableediting.js';
-import TablePropertiesEditing from '../../src/tableproperties/tablepropertiesediting.js';
+import { TableEditing } from '../../src/tableediting.js';
+import { TableLayoutEditing } from '../../src/tablelayout/tablelayoutediting.js';
+import { TablePropertiesEditing } from '../../src/tableproperties/tablepropertiesediting.js';
 
-import TableBorderColorCommand from '../../src/tableproperties/commands/tablebordercolorcommand.js';
-import TableBorderStyleCommand from '../../src/tableproperties/commands/tableborderstylecommand.js';
-import TableBorderWidthCommand from '../../src/tableproperties/commands/tableborderwidthcommand.js';
-import TableAlignmentCommand from '../../src/tableproperties/commands/tablealignmentcommand.js';
-import TableWidthCommand from '../../src/tableproperties/commands/tablewidthcommand.js';
-import TableHeightCommand from '../../src/tableproperties/commands/tableheightcommand.js';
-import TableBackgroundColorCommand from '../../src/tableproperties/commands/tablebackgroundcolorcommand.js';
+import { Table } from '../../src/table.js';
+import { TableProperties } from '../../src/tableproperties.js';
 
-import { setData as setModelData, getData as getModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import { assertTableStyle, assertTRBLAttribute } from '../_utils/utils.js';
+import { TableBorderColorCommand } from '../../src/tableproperties/commands/tablebordercolorcommand.js';
+import { TableBorderStyleCommand } from '../../src/tableproperties/commands/tableborderstylecommand.js';
+import { TableBorderWidthCommand } from '../../src/tableproperties/commands/tableborderwidthcommand.js';
+import { TableAlignmentCommand } from '../../src/tableproperties/commands/tablealignmentcommand.js';
+import { TableWidthCommand } from '../../src/tableproperties/commands/tablewidthcommand.js';
+import { TableHeightCommand } from '../../src/tableproperties/commands/tableheightcommand.js';
+import { TableBackgroundColorCommand } from '../../src/tableproperties/commands/tablebackgroundcolorcommand.js';
+
+import { _setModelData, _getModelData } from '@ckeditor/ckeditor5-engine';
+import { assertTableStyle, assertTableClass, assertTRBLAttribute } from '../_utils/utils.js';
 
 describe( 'table properties', () => {
 	describe( 'TablePropertiesEditing', () => {
@@ -48,8 +55,12 @@ describe( 'table properties', () => {
 			expect( TablePropertiesEditing.isOfficialPlugin ).to.be.true;
 		} );
 
-		it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
-			expect( TablePropertiesEditing.isPremiumPlugin ).to.be.false;
+		it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
+			expect( TablePropertiesEditing.isPremiumPlugin ).to.be.true;
+		} );
+
+		it( 'should have `licenseFeatureCode` static flag set to `TCP`', () => {
+			expect( TablePropertiesEditing.licenseFeatureCode ).to.equal( 'TCP' );
 		} );
 
 		describe( 'init()', () => {
@@ -95,10 +106,18 @@ describe( 'table properties', () => {
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableBorderColor' ) ).to.be.true;
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableBorderStyle' ) ).to.be.true;
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableBorderWidth' ) ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableBorderColor' ).isFormatting ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableBorderStyle' ).isFormatting ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableBorderWidth' ).isFormatting ).to.be.true;
 			} );
 
 			describe( 'upcast conversion', () => {
 				it( 'should not upcast border shorthand when values are the same as default values', () => {
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'border' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
 					editor.setData( '<table style="border:1px double hsl(0, 0%, 70%)"><tr><td>foo</td></tr></table>' );
 
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
@@ -238,6 +257,46 @@ describe( 'table properties', () => {
 					assertTRBLAttribute( table, 'tableBorderWidth', null, null, null, '1px' );
 				} );
 
+				it( 'should allow to be overridden (only border-top consumed)', () => {
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						conversionApi.consumable.consume( data.viewItem, {
+							styles: [ 'border-top' ]
+						} );
+					}, { priority: 'high' } ) );
+
+					editor.setData( '<table style="border:3px solid red;"><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderColor' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+				} );
+
+				it( 'should allow to be overridden (only border-top consumed) and not consume border attribute', () => {
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						conversionApi.consumable.consume( data.viewItem, {
+							styles: [ 'border-top' ]
+						} );
+					}, { priority: 'high' } ) );
+
+					let borderConsumed = false;
+
+					editor.data.upcastDispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						borderConsumed = !conversionApi.consumable.test( data.viewItem, { attributes: 'border' } );
+					}, { priority: 'lowest' } );
+
+					editor.setData( '<table border="4" style="border:3px solid red;"><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderColor' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+
+					expect( borderConsumed ).to.be.false;
+				} );
+
 				describe( 'nested tables', () => {
 					// https://github.com/ckeditor/ckeditor5/issues/6177.
 					it( 'should upcast tables with nested tables in their cells', () => {
@@ -260,7 +319,7 @@ describe( 'table properties', () => {
 
 						// Also check the entire structure of the model.
 						// Previously the test was too loose in that regard.
-						expect( getModelData( editor.model ) ).to.equal(
+						expect( _getModelData( editor.model ) ).to.equal(
 							'[<table tableBorderColor="red" tableBorderStyle="solid" tableBorderWidth="2px">' +
 								'<tableRow>' +
 									'<tableCell>' +
@@ -306,7 +365,7 @@ describe( 'table properties', () => {
 							);
 						} ).not.to.throw();
 
-						expect( getModelData( editor.model ) ).to.equal(
+						expect( _getModelData( editor.model ) ).to.equal(
 							'[<table>' +
 								'<tableRow>' +
 									'<tableCell>' +
@@ -339,7 +398,7 @@ describe( 'table properties', () => {
 							);
 						} ).not.to.throw();
 
-						expect( getModelData( editor.model ) ).to.equal(
+						expect( _getModelData( editor.model ) ).to.equal(
 							'[<table>' +
 								'<tableRow>' +
 									'<tableCell>' +
@@ -387,14 +446,14 @@ describe( 'table properties', () => {
 							);
 						} ).not.to.throw();
 
-						expect( getModelData( editor.model ) ).to.equal(
+						expect( _getModelData( editor.model ) ).to.equal(
 							'[<table>' +
 								'<tableRow>' +
 									'<tableCell>' +
 										'<paragraph>parent:00</paragraph>' +
 									'</tableCell>' +
 									'<tableCell>' +
-										'<table tableBorderColor="green" tableBorderStyle="solid">' +
+											'<table tableBorderColor="green" tableBorderStyle="solid">' +
 											'<tableRow>' +
 												'<tableCell>' +
 													'<paragraph>child:00</paragraph>' +
@@ -436,7 +495,7 @@ describe( 'table properties', () => {
 							expect( table.getAttribute( 'tableBorderStyle' ) ).to.equal( 'solid' );
 							expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '2px' );
 
-							expect( getModelData( editor.model ) ).to.equal(
+							expect( _getModelData( editor.model ) ).to.equal(
 								'[<table tableBorderColor="red" tableBorderStyle="solid" tableBorderWidth="2px">' +
 									'<tableRow>' +
 										'<tableCell>' +
@@ -476,7 +535,7 @@ describe( 'table properties', () => {
 								);
 							} ).not.to.throw();
 
-							expect( getModelData( editor.model ) ).to.equal(
+							expect( _getModelData( editor.model ) ).to.equal(
 								'[<table>' +
 									'<tableRow>' +
 										'<tableCell>' +
@@ -503,7 +562,7 @@ describe( 'table properties', () => {
 								);
 							} ).not.to.throw();
 
-							expect( getModelData( editor.model ) ).to.equal(
+							expect( _getModelData( editor.model ) ).to.equal(
 								'[<table>' +
 									'<tableRow>' +
 										'<tableCell>' +
@@ -541,7 +600,7 @@ describe( 'table properties', () => {
 								);
 							} ).not.to.throw();
 
-							expect( getModelData( editor.model ) ).to.equal(
+							expect( _getModelData( editor.model ) ).to.equal(
 								'[<table>' +
 									'<tableRow>' +
 										'<tableCell>' +
@@ -556,13 +615,440 @@ describe( 'table properties', () => {
 						} );
 					} );
 				} );
+
+				describe( 'border attribute with value greater than 0 handling', () => {
+					beforeEach( async () => {
+						await editor.destroy();
+
+						editor = await VirtualTestEditor.create( {
+							plugins: [ TablePropertiesEditing, Paragraph, TableEditing ]
+						} );
+
+						model = editor.model;
+					} );
+
+					it( 'should convert border="10" to tableBorderWidth="10px"', () => {
+						editor.setData(
+							'<table border="10">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '10px' );
+					} );
+
+					it( 'should not convert border="abc" (default width is set to `1px`)', () => {
+						editor.setData(
+							'<table border="abc">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+					} );
+
+					it( 'should not convert border="Infinite" (default width is set to `1px`)', () => {
+						editor.setData(
+							'<table border="Infinite">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+					} );
+
+					it( 'should not convert negative border values (default width is set to `1px`)', () => {
+						editor.setData(
+							'<table border="-10">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+					} );
+
+					it( 'should not convert border="1" to tableBorderWidth="1px" (default width)', () => {
+						editor.setData(
+							'<table border="1">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).is.undefined;
+					} );
+
+					it( 'should not convert border="10" to tableBorderWidth="10px" when inline border width (5px) style is present', () => {
+						editor.setData(
+							'<table border="10" style="border-width: 5px;">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '5px' );
+					} );
+
+					it( 'should not convert border="10" to tableBorderWidth="10px" when inline border width (0px) style is present', () => {
+						editor.setData(
+							'<table border="10" style="border-width: 0px;">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '0px' );
+					} );
+
+					it( 'should respect inline border overrides (left) when converting border attribute', () => {
+						editor.setData(
+							'<table border="10" style="border-left-width: 5px;">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.deep.equal( {
+							top: '10px',
+							right: '10px',
+							bottom: '10px',
+							left: '5px'
+						} );
+					} );
+
+					it( 'should respect inline border overrides (top and bottom) when converting border attribute', () => {
+						editor.setData(
+							'<table border="10" style="border-top-width: 5px; border-bottom-width: 5px;">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.deep.equal( {
+							top: '5px',
+							right: '10px',
+							bottom: '5px',
+							left: '10px'
+						} );
+					} );
+
+					describe( 'with TableLayoutEditing', () => {
+						let editor, model;
+
+						beforeEach( async () => {
+							editor = await VirtualTestEditor.create( {
+								plugins: [ TablePropertiesEditing, Paragraph, TableEditing, TableLayoutEditing ],
+								table: {
+									tableProperties: {
+										alignment: {
+											useInlineStyles: true
+										}
+									}
+								}
+							} );
+
+							model = editor.model;
+						} );
+
+						afterEach( async () => {
+							await editor.destroy();
+						} );
+
+						it( 'should not upcast the default `border` values', () => {
+							editor.setData(
+								'<table class="layout-table" border="10">' +
+									'<tr>' +
+										'<td>foo</td>' +
+									'</tr>' +
+								'</table>'
+							);
+
+							const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+							expect( table.getAttribute( 'tableBorderColor' ) ).to.be.undefined;
+							expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.undefined;
+							expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.equal( '10px' );
+						} );
+					} );
+				} );
+
+				describe( 'border attribute exists', () => {
+					beforeEach( async () => {
+						await editor.destroy();
+
+						editor = await VirtualTestEditor.create( {
+							plugins: [ TablePropertiesEditing, Paragraph, TableEditing ]
+						} );
+
+						model = editor.model;
+					} );
+
+					it( 'should not convert border attribute without value (default width is set to `1px`)', () => {
+						editor.setData(
+							'<table border>' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+					} );
+
+					describe( 'when default table border width is set to `10px`', () => {
+						beforeEach( async () => {
+							await editor.destroy();
+
+							editor = await VirtualTestEditor.create( {
+								plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+								table: {
+									tableProperties: {
+										defaultProperties: {
+											borderWidth: '10px'
+										}
+									}
+								}
+							} );
+
+							model = editor.model;
+						} );
+
+						it( 'should convert border to `1px` width`', () => {
+							editor.setData(
+								'<table border>' +
+									'<tr>' +
+										'<td>foo</td>' +
+									'</tr>' +
+								'</table>'
+							);
+
+							const table = model.document.getRoot().getChild( 0 );
+							expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '1px' );
+						} );
+					} );
+				} );
+
+				describe( 'border="0" attribute handling', () => {
+					beforeEach( async () => {
+						await editor.destroy();
+
+						editor = await VirtualTestEditor.create( {
+							plugins: [ TablePropertiesEditing, Paragraph, TableEditing ]
+						} );
+
+						model = editor.model;
+					} );
+
+					it( 'should convert border="0" to tableBorderWidth="0px"', () => {
+						editor.setData(
+							'<table border="0">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '0px' );
+					} );
+
+					it( 'should not convert consumed border', () => {
+						editor.data.upcastDispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+							conversionApi.consumable.consume( data.viewItem, { attributes: 'border' } );
+						}, { priority: 'highest' } );
+
+						editor.setData(
+							'<table border="1">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						const table = model.document.getRoot().getChild( 0 );
+						expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+					} );
+
+					it( 'should consume border attribute', () => {
+						let borderConsumed = false;
+
+						editor.data.upcastDispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+							borderConsumed = !conversionApi.consumable.test( data.viewItem, { attributes: 'border' } );
+						}, { priority: 'lowest' } );
+
+						editor.setData(
+							'<table border="0">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						expect( borderConsumed ).to.be.true;
+					} );
+
+					it( 'should not override existing tableBorderStyle attribute', () => {
+						editor.setData(
+							'<table border="0" style="border-style: solid;">' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</table>'
+						);
+
+						expectModel(
+							'<table tableBorderStyle="solid" tableBorderWidth="0px">' +
+								'<tableRow>' +
+									'<tableCell>' +
+										'<paragraph>foo</paragraph>' +
+									'</tableCell>' +
+								'</tableRow>' +
+							'</table>'
+						);
+					} );
+
+					it( 'should not override existing tableBorderStyle if there is also ' +
+							'border-color and border-width defined on the table', () => {
+						editor.setData(
+							'<table border="0" style="border-style: solid; border-color: #f00; border-width: 2px;">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+						);
+
+						expectModel(
+							'<table ' +
+								'tableBorderColor="#f00" ' +
+								'tableBorderStyle="solid" ' +
+								'tableBorderWidth="2px"' +
+							'>' +
+								'<tableRow>' +
+									'<tableCell>' +
+										'<paragraph>foo</paragraph>' +
+									'</tableCell>' +
+								'</tableRow>' +
+							'</table>'
+						);
+					} );
+
+					it( 'should work with tables in figures', () => {
+						editor.setData(
+							'<figure class="table">' +
+								'<table border="0">' +
+									'<tr>' +
+										'<td>foo</td>' +
+									'</tr>' +
+								'</table>' +
+							'</figure>'
+						);
+
+						expectModel(
+							'<table tableBorderWidth="0px">' +
+								'<tableRow>' +
+									'<tableCell>' +
+										'<paragraph>foo</paragraph>' +
+									'</tableCell>' +
+								'</tableRow>' +
+							'</table>'
+						);
+					} );
+
+					it( 'should work with tables with heading rows', () => {
+						editor.setData(
+							'<table border="0">' +
+								'<thead>' +
+									'<tr>' +
+										'<th>header</th>' +
+									'</tr>' +
+								'</thead>' +
+								'<tbody>' +
+									'<tr>' +
+										'<td>body</td>' +
+									'</tr>' +
+								'</tbody>' +
+							'</table>'
+						);
+
+						expectModel(
+							'<table headingRows="1" tableBorderWidth="0px">' +
+								'<tableRow>' +
+									'<tableCell>' +
+										'<paragraph>header</paragraph>' +
+									'</tableCell>' +
+								'</tableRow>' +
+								'<tableRow>' +
+									'<tableCell>' +
+										'<paragraph>body</paragraph>' +
+									'</tableCell>' +
+								'</tableRow>' +
+							'</table>'
+						);
+					} );
+
+					describe( 'when default table border style is set to `none`', () => {
+						beforeEach( async () => {
+							await editor.destroy();
+
+							editor = await VirtualTestEditor.create( {
+								plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+								table: {
+									tableProperties: {
+										defaultProperties: {
+											borderStyle: 'none'
+										}
+									}
+								}
+							} );
+
+							model = editor.model;
+						} );
+
+						it( 'should not convert border="0" to tableBorderStyle="none"', () => {
+							editor.setData(
+								'<table border="0">' +
+									'<tr>' +
+										'<td>foo</td>' +
+									'</tr>' +
+								'</table>'
+							);
+
+							const table = model.document.getRoot().getChild( 0 );
+							expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.undefined;
+							expect( table.getAttribute( 'tableBorderWidth' ) ).to.equal( '0px' );
+						} );
+					} );
+				} );
 			} );
 
 			describe( 'downcast conversion', () => {
 				let table;
 
 				beforeEach( () => {
-					table = createEmptyTable();
+					table = createEmptyTable( editor.model );
 				} );
 
 				it( 'should consume converted item tableBorderColor attribute', () => {
@@ -878,11 +1364,30 @@ describe( 'table properties', () => {
 		describe( 'background color', () => {
 			it( 'should set proper schema rules', () => {
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableBackgroundColor' ) ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableBackgroundColor' ).isFormatting ).to.be.true;
 			} );
 
 			describe( 'upcast conversion', () => {
 				it( 'should upcast background-color', () => {
 					editor.setData( '<table style="background-color:#f00"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( '#f00' );
+				} );
+
+				it( 'should upcast background-color from table within <figure> with `.table` class', () => {
+					editor.setData(
+						'<figure class="table"><table style="background-color:#f00"><tr><td>foo</td></tr></table></figure>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( '#f00' );
+				} );
+
+				it( 'should upcast background-color from table without <figure> without `.table` class', () => {
+					editor.setData(
+						'<figure><table style="background-color:#f00"><tr><td>foo</td></tr></table></figure>'
+					);
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
 					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( '#f00' );
@@ -901,13 +1406,90 @@ describe( 'table properties', () => {
 
 					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( 'rgb(253, 253, 119)' );
 				} );
+
+				it( 'should upcast bgcolor attribute', () => {
+					editor.setData( '<table bgcolor="#f00"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( '#f00' );
+				} );
+
+				it( 'should consume background color style even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									backgroundColor: '#f00'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'background-color' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="background-color:#f00"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableBackgroundColor' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume bgcolor attribute even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									backgroundColor: '#f00'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { attributes: 'bgcolor' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table bgcolor="#f00"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableBackgroundColor' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume `cellpadding` attribute', () => {
+					let cellpaddingConsumed = false;
+
+					editor.data.upcastDispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						cellpaddingConsumed = !conversionApi.consumable.test( data.viewItem, { attributes: 'cellpadding' } );
+					}, { priority: 'lowest' } );
+
+					editor.setData(
+						'<table cellpadding="10">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+
+					expect( cellpaddingConsumed ).to.be.true;
+				} );
 			} );
 
 			describe( 'downcast conversion', () => {
 				let table;
 
 				beforeEach( () => {
-					table = createEmptyTable();
+					table = createEmptyTable( editor.model );
 				} );
 
 				it( 'should consume converted item', () => {
@@ -954,11 +1536,33 @@ describe( 'table properties', () => {
 					assertTableStyle( editor, 'background-color:#ba7;' );
 				} );
 			} );
+
+			it( 'data symmetry - should upcast downcasted tableBackgroundColor', () => {
+				editor.setData( '<table style="background-color:#f00"><tr><td>foo</td></tr></table>' );
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableBackgroundColor' ) ).to.equal( '#f00' );
+
+				model.change( writer => writer.setAttribute( 'tableBackgroundColor', '#ba7', table ) );
+
+				expect( editor.getData() ).to.equalMarkup(
+					'<figure class="table">' +
+						'<table style="background-color:#ba7;">' +
+							'<tbody>' +
+								'<tr>' +
+									'<td>foo</td>' +
+								'</tr>' +
+							'</tbody>' +
+						'</table>' +
+					'</figure>'
+				);
+			} );
 		} );
 
 		describe( 'tableWidth', () => {
 			it( 'should set proper schema rules', () => {
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableWidth' ) ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableWidth' ).isFormatting ).to.be.true;
 			} );
 
 			describe( 'upcast conversion', () => {
@@ -999,13 +1603,175 @@ describe( 'table properties', () => {
 
 					expect( table.getAttribute( 'tableWidth' ) ).to.be.undefined;
 				} );
+
+				it( 'should upcast width attribute from <table>', () => {
+					editor.setData( '<table width="1337.3"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast width (px) attribute from <table>', () => {
+					editor.setData( '<table width="1337.3px"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast width (%) attribute from <table>', () => {
+					editor.setData( '<table width="37.3%"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '37.3%' );
+				} );
+
+				it( 'should upcast width (em) attribute from <table>', () => {
+					editor.setData( '<table width="1337.3em"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					// Normalize to px as other units are not supported by browsers.
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast width (float) with space between number and unit attribute from <table>', () => {
+					editor.setData( '<table width="100.5 %"><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '100.5%' );
+				} );
+
+				it( 'should upcast width (float) with spaces around attribute from <table>', () => {
+					editor.setData( '<table width="  100.5   %  "><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '100.5%' );
+				} );
+
+				it( 'should upcast only the digits before the unknown unit in width attribute from <table>', () => {
+					editor.setData( '<table width="100.5abc11"><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '100.5px' );
+				} );
+
+				it( 'should upcast only the digits before the percentage unit in width attribute from <table>', () => {
+					editor.setData( '<table width="  100.5%11  "><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '100.5%' );
+				} );
+
+				it( 'should not upcast NaN width attribute on table', () => {
+					editor.setData( '<table width="not-a-number"><tr><td>foo</td></tr></table>' );
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.be.undefined;
+				} );
+
+				it( 'should upcast width from style not <table> attribute', () => {
+					editor.setData( '<table width="1337" style="width: 654px;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '654px' );
+				} );
+
+				it( 'should upcast width from <figure> style and ignore table width attribute', () => {
+					editor.setData(
+						'<figure class="table" style="width: 543px">' +
+							'<table width="234"><tbody><tr><td>1</td></tr></tbody></table>' +
+						'</figure>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.equal( '543px' );
+				} );
+
+				it( 'should consume width style even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									width: '50%'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'width' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="width:50%"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableWidth' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume width attribute even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									width: '123px'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { attributes: 'width' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table width=123><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableWidth' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should not consume width style from other figure elements', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing, ImageBlockEditing, ImageResizeEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									width: '50%'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					editor.setData( '<figure class="image" style="width:50%"><img src="/assets/sample.png" alt="alt text"></figure>' );
+
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+						'<imageBlock alt="alt text" resizedWidth="50%" src="/assets/sample.png"></imageBlock>'
+					);
+
+					await editor.destroy();
+				} );
 			} );
 
 			describe( 'downcast conversion', () => {
 				let table;
 
 				beforeEach( () => {
-					table = createEmptyTable();
+					table = createEmptyTable( editor.model );
 				} );
 
 				it( 'should consume converted item', () => {
@@ -1057,6 +1823,7 @@ describe( 'table properties', () => {
 		describe( 'tableHeight', () => {
 			it( 'should set proper schema rules', () => {
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableHeight' ) ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableHeight' ).isFormatting ).to.be.true;
 			} );
 
 			describe( 'upcast conversion', () => {
@@ -1097,13 +1864,135 @@ describe( 'table properties', () => {
 
 					expect( table.getAttribute( 'tableHeight' ) ).to.be.undefined;
 				} );
+
+				it( 'should upcast height attribute from <table>', () => {
+					editor.setData( '<table height="1337.3"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast height (px) attribute from <table>', () => {
+					editor.setData( '<table height="1337.3px"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast height (%) attribute from <table>', () => {
+					editor.setData( '<table height="1337.3%"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '1337.3%' );
+				} );
+
+				it( 'should upcast height (em) attribute from <table>', () => {
+					editor.setData( '<table height="1337.3em"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					// Normalize to px as other units are not supported by browsers.
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '1337.3px' );
+				} );
+
+				it( 'should upcast height from style not <table> attribute', () => {
+					editor.setData( '<table height="1337" style="height: 654px;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '654px' );
+				} );
+
+				it( 'should upcast height from <figure> style and ignore table height attribute', () => {
+					editor.setData(
+						'<figure class="table" style="height: 543px">' +
+							'<table height="234"><tbody><tr><td>1</td></tr></tbody></table>' +
+						'</figure>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.equal( '543px' );
+				} );
+
+				it( 'should consume height style even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									height: '123px'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'height' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="height:123px"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableHeight' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume height attribute even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									height: '123px'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { attributes: 'height' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table height=123><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableHeight' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should not consume height style from other figure elements', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing, ImageBlockEditing, ImageResizeEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									height: '50%'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					editor.setData( '<figure class="image" style="height:50%"><img src="/assets/sample.png" alt="alt text"></figure>' );
+
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+						'<imageBlock alt="alt text" resizedHeight="50%" src="/assets/sample.png"></imageBlock>'
+					);
+
+					await editor.destroy();
+				} );
 			} );
 
 			describe( 'downcast conversion', () => {
 				let table;
 
 				beforeEach( () => {
-					table = createEmptyTable();
+					table = createEmptyTable( editor.model );
 				} );
 
 				it( 'should downcast tableHeight', () => {
@@ -1155,6 +2044,7 @@ describe( 'table properties', () => {
 		describe( 'tableAlignment', () => {
 			it( 'should set proper schema rules', () => {
 				expect( model.schema.checkAttribute( [ '$root', 'table' ], 'tableAlignment' ) ).to.be.true;
+				expect( model.schema.getAttributeProperties( 'tableAlignment' ).isFormatting ).to.be.true;
 			} );
 
 			describe( 'upcast conversion', () => {
@@ -1194,7 +2084,24 @@ describe( 'table properties', () => {
 				} );
 
 				it( 'should discard align=center attribute', () => {
+					// But it should consume it as it is the default alignment, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { attributes: 'align' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
 					editor.setData( '<table align="center"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+				} );
+
+				it( 'should consume default align style', () => {
+					// But it should consume it as it is the default alignment, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: [ 'margin-left', 'margin-right' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="margin-left: auto; margin-right: auto;"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
 					expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
@@ -1206,13 +2113,389 @@ describe( 'table properties', () => {
 
 					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
 				} );
+
+				it( 'should consume alignment style even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'left'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'float' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="float:left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume align attribute even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'left'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { attributes: 'align' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table align="left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should not consume alignmnent float style from other figure elements', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing, ImageBlockEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'right'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// Make sure that float style is not consumed from other figure elements.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'float' } ) ).to.be.true;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<figure class="image" style="float:right"><img src="/assets/sample.png" alt="alt text"></figure>' );
+
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+						'<imageBlock alt="alt text" src="/assets/sample.png"></imageBlock>'
+					);
+
+					await editor.destroy();
+				} );
+
+				it( 'should not consume alignment margins style from other figure elements', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing, ImageBlockEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'center'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// Make sure that float style is not consumed from other figure elements.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'margin-left' } ) ).to.be.true;
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'margin-right' } ) ).to.be.true;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData(
+						'<figure class="image" style="margin-left:auto;margin-right:auto;">' +
+							'<img src="/assets/sample.png" alt="alt text">' +
+						'</figure>'
+					);
+
+					expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+						'<imageBlock alt="alt text" src="/assets/sample.png"></imageBlock>'
+					);
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume margin-left when upcasting float:right', () => {
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'margin-left' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData(
+						'<table style="float:right;margin-left:var(--ck-content-table-style-spacing, 1.5em);"><tr><td>foo</td></tr></table>'
+					);
+				} );
+
+				it( 'should consume margin-right when upcasting float:left', () => {
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: 'margin-right' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData(
+						'<table style="float:left;margin-right:var(--ck-content-table-style-spacing, 1.5em);"><tr><td>foo</td></tr></table>'
+					);
+				} );
+
+				it( 'should upcast style="margin-left: 0; margin-right: auto;" attribute', () => {
+					editor.setData( '<table style="margin-left: 0; margin-right: auto;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockLeft' );
+				} );
+
+				it( 'should upcast style="margin: 0 auto 0 0;" attribute', () => {
+					editor.setData( '<table style="margin: 0 auto 0 0;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockLeft' );
+				} );
+
+				it( 'should upcast style="margin-left: auto; margin-right: 0;" attribute', () => {
+					editor.setData( '<table style="margin-left: auto; margin-right: 0;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockRight' );
+				} );
+
+				it( 'should upcast style="margin: 0 0 0 auto;" attribute', () => {
+					editor.setData( '<table style="margin: 0 0 0 auto;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockRight' );
+				} );
+
+				it( 'should upcast class="table-style-block-align-left" to blockLeft value', () => {
+					editor.setData( '<table class="table-style-block-align-left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockLeft' );
+				} );
+
+				it( 'should upcast class="table-style-block-align-right" to blockRight value', () => {
+					editor.setData( '<table class="table-style-block-align-right"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockRight' );
+				} );
+
+				it( 'should consume margin styles even if it is default (blockLeft)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'blockLeft'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: [ 'margin-left', 'margin-right' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="margin-left:0;margin-right:auto;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume margin styles even if it is default (blockRight)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'blockRight'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { styles: [ 'margin-left', 'margin-right' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table style="margin-left:auto;margin-right:0;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume CSS class "table-style-block-align-left" even if it is default (blockLeft)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'blockLeft'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { classes: 'table-style-block-align-left' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table class="table-style-block-align-left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume CSS class "table-style-block-align-right" even if it is default (blockRight)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'blockRight'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { classes: 'table-style-block-align-right' } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table class="table-style-block-align-right"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should upcast "table-style-align-left" class to left value', () => {
+					editor.setData( '<table class="table-style-align-left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'left' );
+				} );
+
+				it( 'should upcast "table-style-align-right" class to right value', () => {
+					editor.setData( '<table class="table-style-align-right"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'right' );
+				} );
+
+				it( 'should consume default align class (table-style-align-center)', () => {
+					// It should consume it as it is the default alignment, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { classes: [ 'table-style-align-center' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table class="table-style-align-center"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+				} );
+
+				it( 'should upcast "table-style-align-center" class to center value (if default is not center)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'left'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					editor.setData( '<table class="table-style-align-center"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume left alignment class even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'left'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { classes: [ 'table-style-align-left' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table class="table-style-align-left"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
+
+				it( 'should consume right alignment class even if it is default', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'right'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					// But it should consume it, so GHS won't store it.
+					editor.conversion.for( 'upcast' ).add( dispatcher => dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+						expect( conversionApi.consumable.test( data.viewItem, { classes: [ 'table-style-align-right' ] } ) ).to.be.false;
+					}, { priority: 'lowest' } ) );
+
+					editor.setData( '<table class="table-style-align-right"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.hasAttribute( 'tableAlignment' ) ).to.be.false;
+
+					await editor.destroy();
+				} );
 			} );
 
 			describe( 'downcast conversion', () => {
 				let table;
 
 				beforeEach( () => {
-					table = createEmptyTable();
+					table = createEmptyTable( editor.model );
 				} );
 
 				it( 'should consume converted item', () => {
@@ -1232,65 +2515,410 @@ describe( 'table properties', () => {
 
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertTableStyle( editor, '' );
+					assertTableClass( editor, '' );
 				} );
 
 				it( 'should downcast "right" tableAlignment', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertTableStyle( editor, null, 'float:right;' );
+					assertTableClass( editor, null, 'table-style-align-right' );
 				} );
 
 				it( 'should downcast "left" tableAlignment', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
 
-					assertTableStyle( editor, null, 'float:left;' );
+					assertTableClass( editor, null, 'table-style-align-left' );
 				} );
 
 				it( 'should downcast "center" tableAlignment', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'center', table ) );
 
-					assertTableStyle( editor, null, 'float:none;' );
+					assertTableClass( editor, null, 'table-style-align-center' );
+				} );
+
+				it( 'should downcast "blockRight" tableAlignment', () => {
+					model.change( writer => writer.setAttribute( 'tableAlignment', 'blockRight', table ) );
+
+					assertTableClass( editor, null, 'table-style-block-align-right' );
+				} );
+
+				it( 'should downcast "blockLeft" tableAlignment', () => {
+					model.change( writer => writer.setAttribute( 'tableAlignment', 'blockLeft', table ) );
+
+					assertTableClass( editor, null, 'table-style-block-align-left' );
+				} );
+
+				describe( 'with useInlineStyles=true', () => {
+					let editor, model;
+
+					beforeEach( async () => {
+						editor = await VirtualTestEditor.create( {
+							plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+							table: {
+								tableProperties: {
+									alignment: {
+										useInlineStyles: true
+									}
+								}
+							}
+						} );
+
+						model = editor.model;
+						table = createEmptyTable( model );
+					} );
+
+					afterEach( async () => {
+						await editor.destroy();
+					} );
+
+					it( 'should be overridable', () => {
+						editor.conversion.for( 'downcast' )
+							.add( dispatcher => dispatcher.on( 'attribute:tableAlignment:table', ( evt, data, conversionApi ) => {
+								conversionApi.consumable.consume( data.item, evt.name );
+							}, { priority: 'highest' } ) );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
+
+						assertTableStyle( editor, '' );
+					} );
+
+					it( 'should downcast "right" tableAlignment', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
+
+						assertTableStyle( editor, null, 'float:right;margin-left:var(--ck-content-table-style-spacing, 1.5em);' );
+					} );
+
+					it( 'should downcast "left" tableAlignment', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
+
+						assertTableStyle( editor, null, 'float:left;margin-right:var(--ck-content-table-style-spacing, 1.5em);' );
+					} );
+
+					it( 'should downcast "center" tableAlignment', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'center', table ) );
+
+						assertTableStyle( editor, null, 'margin-left:auto;margin-right:auto;' );
+					} );
+
+					it( 'should downcast "blockRight" tableAlignment', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'blockRight', table ) );
+
+						assertTableStyle( editor, null, 'margin-left:auto;margin-right:0;' );
+					} );
+
+					it( 'should downcast "blockLeft" tableAlignment', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'blockLeft', table ) );
+
+						assertTableStyle( editor, null, 'margin-left:0;margin-right:auto;' );
+					} );
+
+					it( 'should downcast changed tableAlignment (left -> right)', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
+
+						assertTableStyle( editor, null, 'float:left;margin-right:var(--ck-content-table-style-spacing, 1.5em);' );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
+
+						assertTableStyle( editor, null, 'float:right;margin-left:var(--ck-content-table-style-spacing, 1.5em);' );
+					} );
+
+					it( 'should downcast changed tableAlignment (right -> left)', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
+
+						assertTableStyle( editor, null, 'float:right;margin-left:var(--ck-content-table-style-spacing, 1.5em);' );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
+
+						assertTableStyle( editor, null, 'float:left;margin-right:var(--ck-content-table-style-spacing, 1.5em);' );
+					} );
+
+					it( 'should downcast removed tableAlignment (from left)', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
+
+						assertTableStyle( editor, null, 'float:left;margin-right:var(--ck-content-table-style-spacing, 1.5em);' );
+
+						model.change( writer => writer.removeAttribute( 'tableAlignment', table ) );
+
+						assertTableStyle( editor );
+					} );
+
+					it( 'should downcast removed tableAlignment (from right)', () => {
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
+
+						assertTableStyle( editor, null, 'float:right;margin-left:var(--ck-content-table-style-spacing, 1.5em);' );
+
+						model.change( writer => writer.removeAttribute( 'tableAlignment', table ) );
+
+						assertTableStyle( editor );
+					} );
+				} );
+
+				describe( 'with TableLayoutEditing', () => {
+					let editor, model;
+
+					beforeEach( async () => {
+						editor = await VirtualTestEditor.create( {
+							plugins: [ TablePropertiesEditing, Paragraph, TableEditing, TableLayoutEditing ],
+							table: {
+								tableProperties: {
+									alignment: {
+										useInlineStyles: true
+									}
+								}
+							}
+						} );
+
+						model = editor.model;
+					} );
+
+					afterEach( async () => {
+						await editor.destroy();
+					} );
+
+					it( 'should downcast "center" alignment for content table using auto margins', () => {
+						_setModelData( model,
+							'<table headingRows="0" headingColumns="0">' +
+								'<tableRow><tableCell><paragraph>content table</paragraph></tableCell></tableRow>' +
+							'</table>'
+						);
+
+						const contentTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'center', contentTable ) );
+
+						expect( editor.getData() ).to.be.equal(
+							'<figure class="table content-table" style="margin-left:auto;margin-right:auto;">' +
+								'<table>' +
+									'<tbody>' +
+										'<tr><td>content table</td></tr>' +
+									'</tbody>' +
+								'</table>' +
+							'</figure>'
+						);
+					} );
+
+					it( 'should downcast "center" alignment for layout table using auto margins', () => {
+						_setModelData( model,
+							'<table tableType="layout" headingRows="0" headingColumns="0">' +
+								'<tableRow><tableCell><paragraph>layout table</paragraph></tableCell></tableRow>' +
+							'</table>'
+						);
+
+						const layoutTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'center', layoutTable ) );
+
+						expect( editor.getData() ).to.be.equal(
+							'<table class="table layout-table" style="margin-left:auto;margin-right:auto;" role="presentation">' +
+								'<tbody>' +
+									'<tr><td>layout table</td></tr>' +
+								'</tbody>' +
+							'</table>'
+						);
+					} );
+
+					it( 'should downcast `blockLeft` alignment for content table using margin styles', () => {
+						_setModelData( model,
+							'<table tableType="content" headingRows="0" headingColumns="0">' +
+								'<tableRow><tableCell><paragraph>content table</paragraph></tableCell></tableRow>' +
+							'</table>'
+						);
+
+						const contentTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'blockLeft', contentTable ) );
+
+						expect( editor.getData() ).to.be.equal(
+							'<figure class="table content-table" style="margin-left:0;margin-right:auto;">' +
+								'<table>' +
+									'<tbody>' +
+										'<tr><td>content table</td></tr>' +
+									'</tbody>' +
+								'</table>' +
+							'</figure>'
+						);
+					} );
+
+					it( 'should downcast `blockRight` alignment for content table using margin styles', () => {
+						_setModelData( model,
+							'<table tableType="content" headingRows="0" headingColumns="0">' +
+								'<tableRow><tableCell><paragraph>content table</paragraph></tableCell></tableRow>' +
+							'</table>'
+						);
+
+						const contentTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+						model.change( writer => writer.setAttribute( 'tableAlignment', 'blockRight', contentTable ) );
+
+						expect( editor.getData() ).to.be.equal(
+							'<figure class="table content-table" style="margin-left:auto;margin-right:0;">' +
+								'<table>' +
+									'<tbody>' +
+										'<tr><td>content table</td></tr>' +
+									'</tbody>' +
+								'</table>' +
+							'</figure>'
+						);
+					} );
+
+					it( 'should downcast border styles for layout table', () => {
+						editor.setData(
+							'<table class="table layout-table" style="border:2px solid #f00"></table>'
+						);
+
+						expect( _getModelData( model, { withoutSelection: true } ) ).to.equal(
+							'<table tableBorderColor="#f00" tableBorderStyle="solid" tableBorderWidth="2px" tableType="layout">' +
+								'<tableRow><tableCell><paragraph></paragraph></tableCell></tableRow>' +
+							'</table>'
+						);
+						expect( editor.getData() ).to.be.equal(
+							'<table class="table layout-table" style="border:2px solid #f00;" role="presentation">' +
+								'<tbody>' +
+									'<tr><td>&nbsp;</td></tr>' +
+								'</tbody>' +
+							'</table>'
+						);
+					} );
+
+					describe( 'with config option `useInlineStyles` set to `false`', () => {
+						let editor, model;
+
+						beforeEach( async () => {
+							editor = await VirtualTestEditor.create( {
+								plugins: [ TablePropertiesEditing, Paragraph, TableEditing, TableLayoutEditing ],
+								table: {
+									tableProperties: {
+										alignment: {
+											useInlineStyles: false
+										}
+									}
+								}
+							} );
+
+							model = editor.model;
+						} );
+
+						afterEach( async () => {
+							await editor.destroy();
+						} );
+
+						it( 'should downcast `blockLeft` alignment for layout table using margin styles', () => {
+							_setModelData( model,
+								'<table tableType="layout" headingRows="0" headingColumns="0">' +
+									'<tableRow><tableCell><paragraph>layout table</paragraph></tableCell></tableRow>' +
+								'</table>'
+							);
+
+							const layoutTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+							model.change( writer => writer.setAttribute( 'tableAlignment', 'blockLeft', layoutTable ) );
+
+							expect( editor.getData() ).to.be.equal(
+								'<table class="table layout-table table-style-block-align-left" role="presentation">' +
+									'<tbody>' +
+										'<tr><td>layout table</td></tr>' +
+									'</tbody>' +
+								'</table>'
+							);
+						} );
+
+						it( 'should downcast `blockRight` alignment for layout table using margin styles', () => {
+							_setModelData( model,
+								'<table tableType="layout" headingRows="0" headingColumns="0">' +
+									'<tableRow><tableCell><paragraph>layout table</paragraph></tableCell></tableRow>' +
+								'</table>'
+							);
+
+							const layoutTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+							model.change( writer => writer.setAttribute( 'tableAlignment', 'blockLeft', layoutTable ) );
+
+							expect( editor.getData() ).to.be.equal(
+								'<table class="table layout-table table-style-block-align-left" role="presentation">' +
+									'<tbody>' +
+										'<tr><td>layout table</td></tr>' +
+									'</tbody>' +
+								'</table>'
+							);
+						} );
+
+						it( 'should downcast "center" alignment for content table using "table-style-align-center" class', () => {
+							_setModelData( model,
+								'<table headingRows="0" headingColumns="0">' +
+									'<tableRow><tableCell><paragraph>content table</paragraph></tableCell></tableRow>' +
+								'</table>'
+							);
+
+							const contentTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+							model.change( writer => writer.setAttribute( 'tableAlignment', 'center', contentTable ) );
+
+							expect( editor.getData() ).to.be.equal(
+								'<figure class="table content-table table-style-align-center">' +
+									'<table>' +
+										'<tbody>' +
+											'<tr><td>content table</td></tr>' +
+										'</tbody>' +
+									'</table>' +
+								'</figure>'
+							);
+						} );
+
+						it( 'should downcast "center" alignment for layout table using "table-style-align-center" class', () => {
+							_setModelData( model,
+								'<table tableType="layout" headingRows="0" headingColumns="0">' +
+									'<tableRow><tableCell><paragraph>layout table</paragraph></tableCell></tableRow>' +
+								'</table>'
+							);
+
+							const layoutTable = model.document.getRoot().getNodeByPath( [ 0 ] );
+							model.change( writer => writer.setAttribute( 'tableAlignment', 'center', layoutTable ) );
+
+							expect( editor.getData() ).to.be.equal(
+								'<table class="table layout-table table-style-align-center" role="presentation">' +
+									'<tbody>' +
+										'<tr><td>layout table</td></tr>' +
+									'</tbody>' +
+								'</table>'
+							);
+						} );
+					} );
 				} );
 
 				it( 'should downcast changed tableAlignment (left -> right)', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
 
-					assertTableStyle( editor, null, 'float:left;' );
+					assertTableClass( editor, null, 'table-style-align-left' );
 
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertTableStyle( editor, null, 'float:right;' );
+					assertTableClass( editor, null, 'table-style-align-right' );
 				} );
 
 				it( 'should downcast changed tableAlignment (right -> left)', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertTableStyle( editor, null, 'float:right;' );
+					assertTableClass( editor, null, 'table-style-align-right' );
 
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
 
-					assertTableStyle( editor, null, 'float:left;' );
+					assertTableClass( editor, null, 'table-style-align-left' );
 				} );
 
 				it( 'should downcast removed tableAlignment (from left)', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'left', table ) );
 
-					assertTableStyle( editor, null, 'float:left;' );
+					assertTableClass( editor, null, 'table-style-align-left' );
 
 					model.change( writer => writer.removeAttribute( 'tableAlignment', table ) );
 
-					assertTableStyle( editor );
+					assertTableClass( editor );
 				} );
 
 				it( 'should downcast removed tableAlignment (from right)', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertTableStyle( editor, null, 'float:right;' );
+					assertTableClass( editor, null, 'table-style-align-right' );
 
 					model.change( writer => writer.removeAttribute( 'tableAlignment', table ) );
 
-					assertTableStyle( editor );
+					assertTableClass( editor );
 				} );
 			} );
 		} );
@@ -1369,14 +2997,14 @@ describe( 'table properties', () => {
 					editor.setData( '<table style="background-color:#00f"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'backgroundColor' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.be.undefined;
 				} );
 
 				it( 'should not upcast the default `background` value', () => {
 					editor.setData( '<table style="background:#00f"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'backgroundColor' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.be.undefined;
 				} );
 			} );
 
@@ -1385,14 +3013,14 @@ describe( 'table properties', () => {
 					editor.setData( '<table style="width:250px"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'width' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableWidth' ) ).to.be.undefined;
 				} );
 
 				it( 'should not upcast the default `width` value from <figure>', () => {
 					editor.setData( '<figure class="table" style="width:250px"><table><tr><td>foo</td></tr></table></figure>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'width' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableWidth' ) ).to.be.undefined;
 				} );
 			} );
 
@@ -1401,14 +3029,14 @@ describe( 'table properties', () => {
 					editor.setData( '<table style="height:150px"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'height' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableHeight' ) ).to.be.undefined;
 				} );
 
 				it( 'should not upcast the default `height` value from <figure>', () => {
 					editor.setData( '<figure class="table" style="height:150px"><table><tr><td>foo</td></tr></table></figure>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
-					expect( table.getAttribute( 'height' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableHeight' ) ).to.be.undefined;
 				} );
 			} );
 
@@ -1428,7 +3056,14 @@ describe( 'table properties', () => {
 				} );
 
 				it( 'should upcast style="float:none" as "center" option', () => {
-					editor.setData( '<table style="float:none;""><tr><td>foo</td></tr></table>' );
+					editor.setData( '<table style="float:none;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
+				} );
+
+				it( 'should upcast style="margin-left:auto;margin-right:auto;" as "center" option', () => {
+					editor.setData( '<table style="margin-left:auto;margin-right:auto;"><tr><td>foo</td></tr></table>' );
 					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
 
 					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
@@ -1440,22 +3075,824 @@ describe( 'table properties', () => {
 
 					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
 				} );
+
+				it( 'should not upcast the default value (center) from style margin auto', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'center'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					editor.setData( '<table style="margin-left:auto;margin-right:auto;"><tr><td>foo</td></tr></table>' );
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+
+					await editor.destroy();
+				} );
 			} );
 		} );
 
-		function createEmptyTable() {
-			setModelData(
+		describe( 'default layout tables properties', () => {
+			let editor, model;
+
+			beforeEach( () => {
+				return VirtualTestEditor
+					.create( {
+						// plugins: [ TablePropertiesEditing, Paragraph, TableEditing, TableLayoutEditing ],
+						plugins: [ Paragraph, TableEditing, TableLayoutEditing, TablePropertiesEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'left',
+									borderStyle: 'none',
+									borderColor: '',
+									borderWidth: '',
+									backgroundColor: '#00f',
+									width: '250px',
+									height: '150px'
+								}
+							}
+						}
+					} )
+					.then( newEditor => {
+						editor = newEditor;
+
+						model = editor.model;
+					} );
+			} );
+
+			afterEach( async () => {
+				await editor.destroy();
+			} );
+
+			describe( 'border', () => {
+				it( 'should not upcast the default `border` values', () => {
+					editor.setData(
+						'<table class="layout-table" style="border-style: none">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderColor' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.undefined;
+					expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.undefined;
+				} );
+
+				it( 'should upcast non-default `border-style` value', () => {
+					editor.setData(
+						'<table class="layout-table" style="border-style:dashed">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderStyle' ) ).to.be.equal( 'dashed' );
+				} );
+
+				it( 'should upcast non-default `border-color` value', () => {
+					editor.setData(
+						'<table class="layout-table" style="border-color:#ff0">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderColor' ) ).to.be.equal( '#ff0' );
+				} );
+
+				it( 'should upcast non-default `border-width` value', () => {
+					editor.setData(
+						'<table class="layout-table" style="border-width:2px">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBorderWidth' ) ).to.be.equal( '2px' );
+				} );
+			} );
+
+			describe( 'background color', () => {
+				it( 'should upcast non-default `background-color` value', () => {
+					editor.setData(
+						'<table class="layout-table" style="background-color:#00f">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.be.equal( '#00f' );
+				} );
+
+				it( 'should upcast non-default `background` value', () => {
+					editor.setData(
+						'<table class="layout-table" style="background:#00f">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableBackgroundColor' ) ).to.be.equal( '#00f' );
+				} );
+			} );
+
+			describe( 'width', () => {
+				it( 'should upcast non-default `width` value from <table>', () => {
+					editor.setData(
+						'<table class="layout-table" style="width:250px">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableWidth' ) ).to.be.equal( '250px' );
+				} );
+			} );
+
+			describe( 'height', () => {
+				it( 'should upcast non-default `height` value from <table>', () => {
+					editor.setData(
+						'<table class="layout-table" style="height:150px">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableHeight' ) ).to.be.equal( '150px' );
+				} );
+			} );
+
+			describe( 'alignment', () => {
+				it( 'should not upcast the default value from the align attribute (none)', () => {
+					editor.setData(
+						'<table class="layout-table" align="none">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+				} );
+
+				it( 'should upcast the non-default value from the style attribute (float:left)', () => {
+					editor.setData(
+						'<table class="layout-table" style="float:left">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.equal( 'left' );
+				} );
+
+				it( 'should upcast the non-default value from the style attribute (float:right)', () => {
+					editor.setData(
+						'<table class="layout-table" style="float:right">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.equal( 'right' );
+				} );
+
+				it( 'should upcast the non-default value from the style attribute (margin-left:auto;margin-right:auto)', () => {
+					editor.setData(
+						'<table class="layout-table" style="margin-left:auto;margin-right:auto">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.be.equal( 'center' );
+				} );
+
+				it( 'should upcast align=left attribute', () => {
+					editor.setData(
+						'<table class="layout-table" align="left">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'left' );
+				} );
+
+				it( 'should upcast align=right attribute', () => {
+					editor.setData(
+						'<table class="layout-table" align="right">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'right' );
+				} );
+
+				it( 'should upcast the table default value from the style attribute (margin-left:auto;margin-right:auto)', async () => {
+					const editor = await VirtualTestEditor.create( {
+						plugins: [ TablePropertiesEditing, Paragraph, TableEditing, TableLayoutEditing ],
+						table: {
+							tableProperties: {
+								defaultProperties: {
+									alignment: 'center'
+								}
+							}
+						}
+					} );
+					const model = editor.model;
+
+					editor.setData(
+						'<table class="layout-table" style="margin-left:auto;margin-right:auto;"><tr><td>foo</td></tr></table>'
+					);
+					const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+					expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
+
+					await editor.destroy();
+				} );
+			} );
+		} );
+
+		describe( 'upcast table wrapped by div', () => {
+			it( 'should upcast align `right` attribute from div wrapped on table', () => {
+				editor.setData(
+					'<div align="right">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockRight' );
+			} );
+
+			it( 'should upcast align `center` attribute from div wrapped on table', () => {
+				editor.setData(
+					'<div align="center">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
+			} );
+
+			it( 'should upcast align `left` attribute from div wrapped on table', () => {
+				editor.setData(
+					'<div align="left">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'blockLeft' );
+			} );
+
+			it( 'should upcast align `left` attribute from div wrapped on table on table with align `left` to `left`', () => {
+				editor.setData(
+					'<div align="left">' +
+						'<table align="left">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'left' );
+			} );
+
+			it( 'should upcast align `right` attribute from div wrapped on table with align `right`', () => {
+				editor.setData(
+					'<div align="right">' +
+						'<table align="right">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'right' );
+			} );
+
+			it( 'should upcast align `right` attribute from div wrapped on table with align `left`', () => {
+				editor.setData(
+					'<div align="right">' +
+						'<table align="left">' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'left' );
+			} );
+
+			it( 'should upcast the table alignment to default alignment value when align value is not recognized', () => {
+				editor.setData(
+					'<div align="foo">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'center' );
+			} );
+
+			it( 'should upcast the table alignment to the one set in config when align value is not recognized', async () => {
+				const editor = await VirtualTestEditor.create( {
+					plugins: [ TablePropertiesEditing, Paragraph, TableEditing ],
+					table: {
+						tableProperties: {
+							defaultProperties: {
+								alignment: 'right'
+							}
+						}
+					}
+				} );
+				const model = editor.model;
+
+				editor.setData(
+					'<div align="foo">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.equal( 'right' );
+
+				await editor.destroy();
+			} );
+
+			it( 'should not upcast alignment when align value is empty', () => {
+				editor.setData(
+					'<div align="">' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+			} );
+
+			it( 'should not upcast alignment when align value is not set', () => {
+				editor.setData(
+					'<div>' +
+						'<table>' +
+							'<tr>' +
+								'<td>foo</td>' +
+							'</tr>' +
+						'</table>' +
+					'</div>'
+				);
+				const table = model.document.getRoot().getNodeByPath( [ 0 ] );
+
+				expect( table.getAttribute( 'tableAlignment' ) ).to.be.undefined;
+			} );
+
+			it( 'should not convert empty div', () => {
+				editor.setData(
+					'<div align="right"></div>'
+				);
+
+				expect( _getModelData( editor.model ) ).to.equal( '<paragraph>[]</paragraph>' );
+			} );
+
+			it( 'should not consume if the div element was not converted', () => {
+				// Test a case when a conversion of a table inside a div is not returning anything.
+				// Either because of a failed conversion or if the table was already consumed.
+				editor.data.upcastDispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+					conversionApi.consumable.consume( data.viewItem, { name: true } );
+					data.modelRange = conversionApi.writer.createRange( data.modelCursor );
+				}, { priority: 'highest' } );
+
+				editor.data.upcastDispatcher.on( 'element:div', ( evt, data, conversionApi ) => {
+					expect( conversionApi.consumable.test( data.viewItem, { name: true, attributes: 'align' } ) ).to.be.true;
+				} );
+
+				editor.setData( '<div align="right"><table>xyz</table></div>' );
+			} );
+
+			describe( 'in limited container allowing only inline content', () => {
+				beforeEach( () => {
+					model.schema.register( 'limitContainer', {
+						allowWhere: '$block',
+						allowContentOf: '$block',
+						isLimit: true
+					} );
+					editor.conversion.elementToElement( {
+						model: 'limitContainer',
+						view: 'section'
+					} );
+				} );
+
+				it( 'should strip table in section if parent does not allow it', () => {
+					editor.setData(
+						'<section>' +
+							'123' +
+							'<div align="right">' +
+								'<table>' +
+									'<tr>' +
+										'<td>foo</td>' +
+									'</tr>' +
+								'</table>' +
+							'</div>' +
+							'456' +
+						'</section>'
+					);
+
+					expect( _getModelData( editor.model ) ).to.equal( '<limitContainer>[]123foo456</limitContainer>' );
+				} );
+			} );
+		} );
+
+		describe( 'conversion in clipboard pipeline', () => {
+			let editor, editorElement, model, viewDocument;
+
+			beforeEach( async () => {
+				editorElement = document.createElement( 'div' );
+				document.body.appendChild( editorElement );
+
+				editor = await ClassicTestEditor.create( editorElement, {
+					plugins: [ Paragraph, Table, TableProperties, ClipboardPipeline ]
+				} );
+
+				model = editor.model;
+				viewDocument = editor.editing.view.document;
+			} );
+
+			afterEach( async () => {
+				editorElement.remove();
+				await editor.destroy();
+			} );
+
+			it( 'should wrap table in div with align="right" attribute for `blockRight` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="blockRight">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<div align="right">' +
+							'<table class="table table-style-block-align-right" style="margin-left:auto;margin-right:0;">' +
+								'<tbody><tr><td>foo</td></tr></tbody>' +
+							'</table>' +
+						'</div>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should wrap table in div with align="right" attribute for `right` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="right">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<div align="right">' +
+							'<table class="table table-style-align-right" ' +
+							'style="float:right;" align="right">' +
+								'<tbody><tr><td>foo</td></tr></tbody>' +
+							'</table>' +
+						'</div>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should wrap table in div with align="center" attribute for `center` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="center">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<div align="center">' +
+							'<table class="table table-style-align-center" ' +
+							'style="margin-left:auto;margin-right:auto;" align="center">' +
+								'<tbody><tr><td>foo</td></tr></tbody>' +
+							'</table>' +
+						'</div>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should not wrap table in div for `blockLeft` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="blockLeft">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<table class="table table-style-block-align-left" style="margin-left:0;margin-right:auto;">' +
+							'<tbody><tr><td>foo</td></tr></tbody>' +
+						'</table>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should not wrap table in div for `left` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="left">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<table class="table table-style-align-left" ' +
+						'style="float:left;" align="left">' +
+							'<tbody><tr><td>foo</td></tr></tbody>' +
+						'</table>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should wrap only table in div with align="right" attribute for `blockRight` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<paragraph>bar</paragraph>' +
+					'<table tableAlignment="blockRight">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<paragraph>foo</paragraph>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<p>bar</p>' +
+						'<div align="right">' +
+							'<table class="table table-style-block-align-right" style="margin-left:auto;margin-right:0;">' +
+								'<tbody><tr><td>foo</td></tr></tbody>' +
+							'</table>' +
+						'</div>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+
+			it( 'should wrap nested tables in div with align="right" attribute for `blockRight` table alignment', done => {
+				const dataTransferMock = createDataTransfer();
+				const preventDefaultSpy = sinon.spy();
+
+				_setModelData(
+					model,
+					'[<table tableAlignment="blockRight">' +
+						'<tableRow>' +
+							'<tableCell>' +
+								'<table tableAlignment="blockRight">' +
+									'<tableRow>' +
+										'<tableCell>' +
+											'<paragraph>foo</paragraph>' +
+										'</tableCell>' +
+									'</tableRow>' +
+								'</table>' +
+							'</tableCell>' +
+						'</tableRow>' +
+					'</table>]'
+				);
+
+				viewDocument.on( 'clipboardOutput', ( evt, data ) => {
+					expect( data.method ).to.equal( 'copy' );
+					expect( preventDefaultSpy.called ).to.be.true;
+					expect( data.dataTransfer ).to.equal( dataTransferMock );
+					expect( data.dataTransfer.getData( 'text/html' ) ).to.be.equal(
+						'<div align="right">' +
+							'<table class="table table-style-block-align-right" style="margin-left:auto;margin-right:0;">' +
+								'<tbody><tr><td>' +
+									'<div align="right">' +
+										'<table class="table table-style-block-align-right" style="margin-left:auto;margin-right:0;">' +
+											'<tbody><tr><td>foo</td></tr></tbody>' +
+										'</table>' +
+									'</div>' +
+								'</td></tr></tbody>' +
+							'</table>' +
+						'</div>'
+					);
+
+					done();
+				}, { priority: 'lowest' } );
+
+				viewDocument.fire( 'copy', {
+					dataTransfer: dataTransferMock,
+					preventDefault: preventDefaultSpy
+				} );
+			} );
+		} );
+
+		function createEmptyTable( model ) {
+			_setModelData(
 				model,
 				'<table headingRows="0" headingColumns="0">' +
-				'<tableRow>' +
-				'<tableCell>' +
-				'<paragraph>foo</paragraph>' +
-				'</tableCell>' +
-				'</tableRow>' +
+					'<tableRow>' +
+						'<tableCell>' +
+							'<paragraph>foo</paragraph>' +
+						'</tableCell>' +
+					'</tableRow>' +
 				'</table>'
 			);
 
 			return model.document.getRoot().getNodeByPath( [ 0 ] );
+		}
+
+		function createDataTransfer() {
+			const store = new Map();
+
+			return {
+				setData( type, data ) {
+					store.set( type, data );
+				},
+
+				getData( type ) {
+					return store.get( type );
+				}
+			};
+		}
+
+		function expectModel( data ) {
+			expect( _getModelData( model, { withoutSelection: true } ) ).to.equalMarkup( data );
 		}
 	} );
 } );

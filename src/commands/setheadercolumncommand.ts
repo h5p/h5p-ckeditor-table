@@ -1,19 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/commands/setheadercolumncommand
  */
 
-import { Command } from 'ckeditor5/src/core.js';
-import type TableUtils from '../tableutils.js';
+import { Command } from '@ckeditor/ckeditor5-core';
+import { type TableUtils } from '../tableutils.js';
 
-import {
-	isHeadingColumnCell,
-	updateNumericAttribute
-} from '../utils/common.js';
+import { isHeadingColumnCell } from '../utils/common.js';
 import { getHorizontallyOverlappingCells, splitVertically } from '../utils/structure.js';
 
 /**
@@ -31,10 +28,10 @@ import { getHorizontallyOverlappingCells, splitVertically } from '../utils/struc
  * **Note:** All preceding columns will also become headers. If the current column is already a header, executing this command
  * will make it a regular column back again (including the following columns).
  */
-export default class SetHeaderColumnCommand extends Command {
+export class SetHeaderColumnCommand extends Command {
 	/**
 	 * Flag indicating whether the command is active. The command is active when the
-	 * {@link module:engine/model/selection~Selection} is in a header column.
+	 * {@link module:engine/model/selection~ModelSelection} is in a header column.
 	 *
 	 * @observable
 	 */
@@ -44,14 +41,22 @@ export default class SetHeaderColumnCommand extends Command {
 	 * @inheritDoc
 	 */
 	public override refresh(): void {
-		const model = this.editor.model;
 		const tableUtils: TableUtils = this.editor.plugins.get( 'TableUtils' );
+		const model = this.editor.model;
 
 		const selectedCells = tableUtils.getSelectionAffectedTableCells( model.document.selection );
-		const isInTable = selectedCells.length > 0;
 
-		this.isEnabled = isInTable;
-		this.value = isInTable && selectedCells.every( cell => isHeadingColumnCell( tableUtils, cell ) );
+		if ( selectedCells.length === 0 ) {
+			this.isEnabled = false;
+			this.value = false;
+
+			return;
+		}
+
+		const table = selectedCells[ 0 ].findAncestor( 'table' )!;
+
+		this.isEnabled = model.schema.checkAttribute( table, 'headingColumns' );
+		this.value = selectedCells.every( cell => isHeadingColumnCell( tableUtils, cell ) );
 	}
 
 	/**
@@ -89,7 +94,7 @@ export default class SetHeaderColumnCommand extends Command {
 				}
 			}
 
-			updateNumericAttribute( 'headingColumns', headingColumnsToSet, table, writer, 0 );
+			tableUtils.setHeadingColumnsCount( writer, table, headingColumnsToSet );
 		} );
 	}
 }

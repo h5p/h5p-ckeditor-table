@@ -1,48 +1,59 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableediting
  */
 
-import { Plugin, type Editor } from 'ckeditor5/src/core.js';
-import type { PositionOffset, ViewElement, SlotFilter } from 'ckeditor5/src/engine.js';
+import { Plugin, type Editor } from '@ckeditor/ckeditor5-core';
+import type { ModelPositionOffset, ViewElement, DowncastSlotFilter } from '@ckeditor/ckeditor5-engine';
 
-import upcastTable, { ensureParagraphInTableCell, skipEmptyTableRow, upcastTableFigure } from './converters/upcasttable.js';
-import { convertParagraphInTableCell, downcastCell, downcastRow, downcastTable } from './converters/downcast.js';
+import { upcastTable, ensureParagraphInTableCell, skipEmptyTableRow, upcastTableFigure } from './converters/upcasttable.js';
+import {
+	convertParagraphInTableCell,
+	downcastCell,
+	downcastRow,
+	downcastTable,
+	downcastTableBorderAndBackgroundAttributes,
+	convertPlainTable,
+	convertPlainTableCaption
+} from './converters/downcast.js';
 
-import InsertTableCommand from './commands/inserttablecommand.js';
-import InsertRowCommand from './commands/insertrowcommand.js';
-import InsertColumnCommand from './commands/insertcolumncommand.js';
-import SplitCellCommand from './commands/splitcellcommand.js';
-import MergeCellCommand from './commands/mergecellcommand.js';
-import RemoveRowCommand from './commands/removerowcommand.js';
-import RemoveColumnCommand from './commands/removecolumncommand.js';
-import SetHeaderRowCommand from './commands/setheaderrowcommand.js';
-import SetHeaderColumnCommand from './commands/setheadercolumncommand.js';
-import MergeCellsCommand from './commands/mergecellscommand.js';
-import SelectRowCommand from './commands/selectrowcommand.js';
-import SelectColumnCommand from './commands/selectcolumncommand.js';
-import TableUtils from '../src/tableutils.js';
+import { InsertTableCommand } from './commands/inserttablecommand.js';
+import { InsertRowCommand } from './commands/insertrowcommand.js';
+import { InsertColumnCommand } from './commands/insertcolumncommand.js';
+import { SplitCellCommand } from './commands/splitcellcommand.js';
+import { MergeCellCommand } from './commands/mergecellcommand.js';
+import { RemoveRowCommand } from './commands/removerowcommand.js';
+import { RemoveColumnCommand } from './commands/removecolumncommand.js';
+import { SetHeaderRowCommand } from './commands/setheaderrowcommand.js';
+import { SetFooterRowCommand } from './commands/setfooterrowcommand.js';
+import { SetHeaderColumnCommand } from './commands/setheadercolumncommand.js';
+import { MergeCellsCommand } from './commands/mergecellscommand.js';
+import { SelectRowCommand } from './commands/selectrowcommand.js';
+import { SelectColumnCommand } from './commands/selectcolumncommand.js';
+import { TableUtils } from './tableutils.js';
 
-import injectTableLayoutPostFixer from './converters/table-layout-post-fixer.js';
-import injectTableCellParagraphPostFixer from './converters/table-cell-paragraph-post-fixer.js';
+import { injectTableLayoutPostFixer } from './converters/table-layout-post-fixer.js';
+import { injectTableCellParagraphPostFixer } from './converters/table-cell-paragraph-post-fixer.js';
+import { injectTableStructurePostFixer } from './converters/table-structure-post-fixer.js';
 
-import tableHeadingsRefreshHandler from './converters/table-headings-refresh-handler.js';
-import tableCellRefreshHandler from './converters/table-cell-refresh-handler.js';
+import { tableStructureRefreshHandler } from './converters/table-structure-refresh-handler.js';
+import { tableCellRefreshHandler } from './converters/table-cell-refresh-handler.js';
+import { isTableCellTypeEnabled } from './utils/common.js';
 
 import '../theme/tableediting.css';
 
 /**
  * The table editing feature.
  */
-export default class TableEditing extends Plugin {
+export class TableEditing extends Plugin {
 	/**
 	 * Handlers for creating additional slots in the table.
 	 */
-	private _additionalSlots: Array<AdditionalSlot>;
+	private _additionalSlots: Array<TableConversionAdditionalSlot>;
 
 	/**
 	 * @inheritDoc
@@ -84,9 +95,17 @@ export default class TableEditing extends Plugin {
 		const conversion = editor.conversion;
 		const tableUtils = editor.plugins.get( TableUtils );
 
+		editor.config.define( 'table.enableFooters', false );
+
+		const useFooterElement = !!editor.config.get( 'table.enableFooters' );
+
 		schema.register( 'table', {
 			inheritAllFrom: '$blockObject',
-			allowAttributes: [ 'headingRows', 'headingColumns' ]
+			allowAttributes: [
+				'headingRows',
+				'headingColumns',
+				...useFooterElement ? [ 'footerRows' ] : []
+			]
 		} );
 
 		schema.register( 'tableRow', {
@@ -106,12 +125,15 @@ export default class TableEditing extends Plugin {
 		conversion.for( 'upcast' ).add( upcastTableFigure() );
 
 		// Table conversion.
-		conversion.for( 'upcast' ).add( upcastTable() );
+		conversion.for( 'upcast' ).add( upcastTable( { enableFooters: useFooterElement } ) );
 
 		conversion.for( 'editingDowncast' ).elementToStructure( {
 			model: {
 				name: 'table',
-				attributes: [ 'headingRows' ]
+				attributes: [
+					'headingRows',
+					...useFooterElement ? [ 'footerRows' ] : []
+				]
 			},
 			view: downcastTable( tableUtils, {
 				asWidget: true,
@@ -121,7 +143,10 @@ export default class TableEditing extends Plugin {
 		conversion.for( 'dataDowncast' ).elementToStructure( {
 			model: {
 				name: 'table',
-				attributes: [ 'headingRows' ]
+				attributes: [
+					'headingRows',
+					...useFooterElement ? [ 'footerRows' ] : []
+				]
 			},
 			view: downcastTable( tableUtils, {
 				additionalSlots: this._additionalSlots
@@ -145,11 +170,16 @@ export default class TableEditing extends Plugin {
 
 		conversion.for( 'editingDowncast' ).elementToElement( {
 			model: 'tableCell',
-			view: downcastCell( { asWidget: true } )
+			view: downcastCell( {
+				asWidget: true,
+				cellTypeEnabled: () => isTableCellTypeEnabled( this.editor )
+			} )
 		} );
 		conversion.for( 'dataDowncast' ).elementToElement( {
 			model: 'tableCell',
-			view: downcastCell()
+			view: downcastCell( {
+				cellTypeEnabled: () => isTableCellTypeEnabled( this.editor )
+			} )
 		} );
 
 		// Duplicates code - needed to properly refresh paragraph inside a table cell.
@@ -177,9 +207,22 @@ export default class TableEditing extends Plugin {
 			view: 'rowspan'
 		} );
 
+		// Plain table output converters (also used in the clipboard pipeline).
+		this._addPlainTableOutputConverters();
+
 		// Define the config.
 		editor.config.define( 'table.defaultHeadings.rows', 0 );
 		editor.config.define( 'table.defaultHeadings.columns', 0 );
+		editor.config.define( 'table.defaultFooters', 0 );
+		editor.config.define( 'table.showHiddenBorders', true );
+
+		if ( editor.config.get( 'table.showHiddenBorders' ) ) {
+			editor.editing.view.change( writer => {
+				for ( const root of editor.editing.view.document.roots ) {
+					writer.addClass( 'ck-table-show-hidden-borders', root );
+				}
+			} );
+		}
 
 		// Define all the commands.
 		editor.commands.add( 'insertTable', new InsertTableCommand( editor ) );
@@ -204,14 +247,27 @@ export default class TableEditing extends Plugin {
 		editor.commands.add( 'setTableColumnHeader', new SetHeaderColumnCommand( editor ) );
 		editor.commands.add( 'setTableRowHeader', new SetHeaderRowCommand( editor ) );
 
+		if ( useFooterElement ) {
+			editor.commands.add( 'setTableFooterRow', new SetFooterRowCommand( editor ) );
+		}
+
 		editor.commands.add( 'selectTableRow', new SelectRowCommand( editor ) );
 		editor.commands.add( 'selectTableColumn', new SelectColumnCommand( editor ) );
 
 		injectTableLayoutPostFixer( model );
 		injectTableCellParagraphPostFixer( model );
 
+		if ( useFooterElement ) {
+			injectTableStructurePostFixer( editor );
+		}
+
 		this.listenTo( model.document, 'change:data', () => {
-			tableHeadingsRefreshHandler( model, editor.editing );
+			// It's no longer needed to refresh table headings on every data change if table cell type feature is enabled.
+			// It's because headings rows / columns are updated based on cell types which triggers their own refresh handler.
+			if ( !isTableCellTypeEnabled( editor ) ) {
+				tableStructureRefreshHandler( model, editor.editing );
+			}
+
 			tableCellRefreshHandler( model, editor.editing );
 		} );
 	}
@@ -219,8 +275,37 @@ export default class TableEditing extends Plugin {
 	/**
 	 * Registers downcast handler for the additional table slot.
 	 */
-	public registerAdditionalSlot( slotHandler: AdditionalSlot ): void {
+	public registerAdditionalSlot( slotHandler: TableConversionAdditionalSlot ): void {
 		this._additionalSlots.push( slotHandler );
+	}
+
+	/**
+	 * Adds converters for plain table output. These converters are used either when the `PlainTableOutput` plugin is loaded
+	 * or when content is processed by the clipboard pipeline, ensuring that pasted tables are not wrapped in a <figure> element.
+	 */
+	private _addPlainTableOutputConverters(): void {
+		const editor = this.editor;
+
+		// Override default table data downcast converter.
+		editor.conversion.for( 'dataDowncast' ).elementToStructure( {
+			model: 'table',
+			view: convertPlainTable( editor ),
+			converterPriority: 'high'
+		} );
+
+		// Make sure table <caption> is downcasted into <caption> in the data pipeline when necessary.
+		if ( editor.plugins.has( 'TableCaptionEditing' ) ) {
+			editor.conversion.for( 'dataDowncast' ).elementToElement( {
+				model: 'caption',
+				view: convertPlainTableCaption( editor ),
+				converterPriority: 'high'
+			} );
+		}
+
+		// Handle border-style, border-color, border-width and background-color table attributes.
+		if ( editor.plugins.has( 'TablePropertiesEditing' ) ) {
+			downcastTableBorderAndBackgroundAttributes( editor );
+		}
 	}
 }
 
@@ -290,15 +375,15 @@ function upcastCellSpan( type: string ) {
  * </table>
  * ```
  */
-export interface AdditionalSlot {
+export interface TableConversionAdditionalSlot {
 
 	/**
 	 * Filter for elements that should be placed inside given slot.
 	 */
-	filter: SlotFilter;
+	filter: DowncastSlotFilter;
 
 	/**
 	 * Position of the slot within the table.
 	 */
-	positionOffset: PositionOffset;
+	positionOffset: ModelPositionOffset;
 }

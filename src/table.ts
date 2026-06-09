@@ -1,21 +1,21 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/table
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
-import { Widget } from 'ckeditor5/src/widget.js';
+import { Plugin } from '@ckeditor/ckeditor5-core';
+import { Widget } from '@ckeditor/ckeditor5-widget';
 
-import TableEditing from './tableediting.js';
-import TableUI from './tableui.js';
-import TableSelection from './tableselection.js';
-import TableClipboard from './tableclipboard.js';
-import TableKeyboard from './tablekeyboard.js';
-import TableMouse from './tablemouse.js';
+import { TableEditing } from './tableediting.js';
+import { TableUI } from './tableui.js';
+import { TableSelection } from './tableselection.js';
+import { TableClipboard } from './tableclipboard.js';
+import { TableKeyboard } from './tablekeyboard.js';
+import { TableMouse } from './tablemouse.js';
 
 import '../theme/table.css';
 
@@ -33,7 +33,7 @@ import '../theme/table.css';
  * * {@link module:table/tableclipboard~TableClipboard clipboard feature},
  * * {@link module:table/tableui~TableUI UI feature}.
  */
-export default class Table extends Plugin {
+export class Table extends Plugin {
 	/**
 	 * @inheritDoc
 	 */

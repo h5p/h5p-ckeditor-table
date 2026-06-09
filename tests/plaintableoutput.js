@@ -1,20 +1,18 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-/* globals document */
-
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
-import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
+import { ClassicTestEditor } from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { ArticlePluginSet } from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
+import { ClipboardPipeline } from '@ckeditor/ckeditor5-clipboard';
 import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
-import { setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import Table from '../src/table.js';
-import PlainTableOutput from '../src/plaintableoutput.js';
+import { _setModelData } from '@ckeditor/ckeditor5-engine';
+import { Table } from '../src/table.js';
+import { PlainTableOutput } from '../src/plaintableoutput.js';
 import { modelTable } from './_utils/utils.js';
-import TableCaption from '../src/tablecaption.js';
-import TableProperties from '../src/tableproperties.js';
+import { TableCaptionEditing } from '../src/tablecaption/tablecaptionediting.js';
+import { TablePropertiesEditing } from '../src/tableproperties/tablepropertiesediting.js';
 
 describe( 'PlainTableOutput', () => {
 	let editor, editorElement, model;
@@ -24,7 +22,7 @@ describe( 'PlainTableOutput', () => {
 		document.body.appendChild( editorElement );
 
 		editor = await ClassicTestEditor.create( editorElement, {
-			plugins: [ Paragraph, Table, TableCaption, TableProperties, PlainTableOutput, ClipboardPipeline ]
+			plugins: [ Paragraph, Table, TableCaptionEditing, TablePropertiesEditing, PlainTableOutput, ClipboardPipeline ]
 		} );
 
 		model = editor.model;
@@ -54,12 +52,12 @@ describe( 'PlainTableOutput', () => {
 	describe( 'conversion in data pipeline', () => {
 		describe( 'model to view', () => {
 			it( 'should create tbody section', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ 'foo' ]
 				] ) );
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<tbody>' +
 							'<tr><td>foo</td></tr>' +
 						'</tbody>' +
@@ -68,14 +66,14 @@ describe( 'PlainTableOutput', () => {
 			} );
 
 			it( 'should create heading rows', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '1', '2' ],
 					[ '3', '4' ],
 					[ '5', '6' ]
 				], { headingRows: 2 } ) );
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<thead>' +
 							'<tr><th>1</th><th>2</th></tr>' +
 							'<tr><th>3</th><th>4</th></tr>' +
@@ -88,14 +86,14 @@ describe( 'PlainTableOutput', () => {
 			} );
 
 			it( 'should create heading columns', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '1', '2' ],
 					[ '3', '4' ],
 					[ '5', '6' ]
 				], { headingColumns: 1 } ) );
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<tbody>' +
 							'<tr><th>1</th><td>2</td></tr>' +
 							'<tr><th>3</th><td>4</td></tr>' +
@@ -106,14 +104,14 @@ describe( 'PlainTableOutput', () => {
 			} );
 
 			it( 'should create heading rows and columns', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '1', '2' ],
 					[ '3', '4' ],
 					[ '5', '6' ]
 				], { headingRows: 1, headingColumns: 1 } ) );
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<thead>' +
 							'<tr><th>1</th><th>2</th></tr>' +
 						'</thead>' +
@@ -125,14 +123,58 @@ describe( 'PlainTableOutput', () => {
 				);
 			} );
 
+			it( 'should create footer rows', () => {
+				_setModelData( model, modelTable( [
+					[ '1', '2' ],
+					[ '3', '4' ],
+					[ '5', '6' ]
+				], { footerRows: 2 } ) );
+
+				expect( editor.getData() ).to.equal(
+					'<table class="table">' +
+						'<tbody>' +
+							'<tr><td>1</td><td>2</td></tr>' +
+						'</tbody>' +
+						'<tfoot>' +
+							'<tr><td>3</td><td>4</td></tr>' +
+							'<tr><td>5</td><td>6</td></tr>' +
+						'</tfoot>' +
+					'</table>'
+				);
+			} );
+
+			it( 'should create footer rows and heading rows', () => {
+				_setModelData( model, modelTable( [
+					[ '1', '2' ],
+					[ '3', '4' ],
+					[ '5', '6' ],
+					[ '7', '8' ]
+				], { headingRows: 1, footerRows: 2 } ) );
+
+				expect( editor.getData() ).to.equal(
+					'<table class="table">' +
+						'<thead>' +
+							'<tr><th>1</th><th>2</th></tr>' +
+						'</thead>' +
+						'<tbody>' +
+							'<tr><td>3</td><td>4</td></tr>' +
+						'</tbody>' +
+						'<tfoot>' +
+							'<tr><td>5</td><td>6</td></tr>' +
+							'<tr><td>7</td><td>8</td></tr>' +
+						'</tfoot>' +
+					'</table>'
+				);
+			} );
+
 			it( 'should work when heading rows number is bigger than number of rows', () => {
-				setModelData( model, modelTable( [
+				_setModelData( model, modelTable( [
 					[ '1', '2' ],
 					[ '3', '4' ]
 				], { headingRows: 3 } ) );
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<thead>' +
 							'<tr><th>1</th><th>2</th></tr>' +
 							'<tr><th>3</th><th>4</th></tr>' +
@@ -141,8 +183,24 @@ describe( 'PlainTableOutput', () => {
 				);
 			} );
 
+			it( 'should work when footer rows number is bigger than number of rows', () => {
+				_setModelData( model, modelTable( [
+					[ '1', '2' ],
+					[ '3', '4' ]
+				], { footerRows: 3 } ) );
+
+				expect( editor.getData() ).to.equal(
+					'<table class="table">' +
+						'<tfoot>' +
+							'<tr><td>1</td><td>2</td></tr>' +
+							'<tr><td>3</td><td>4</td></tr>' +
+						'</tfoot>' +
+					'</table>'
+				);
+			} );
+
 			it( 'should create caption element', () => {
-				setModelData( model,
+				_setModelData( model,
 					'<table>' +
 						'<tableRow>' +
 							'<tableCell><paragraph>1</paragraph></tableCell>' +
@@ -153,7 +211,7 @@ describe( 'PlainTableOutput', () => {
 				);
 
 				expect( editor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<caption>Foo</caption>' +
 						'<tbody>' +
 							'<tr><td>1</td><td>2</td></tr>' +
@@ -177,7 +235,7 @@ describe( 'PlainTableOutput', () => {
 				);
 
 				expect( testEditor.getData() ).to.equal(
-					'<table>' +
+					'<table class="table">' +
 						'<tbody>' +
 							'<tr><td>1</td><td>2</td></tr>' +
 						'</tbody>' +
@@ -236,7 +294,7 @@ describe( 'PlainTableOutput', () => {
 				it( 'tableAlignment', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertPlainTableStyle( editor, 'float:right;' );
+					assertPlainTableClass( editor, 'table-style-align-right' );
 				} );
 
 				it( 'tableWidth', () => {
@@ -313,7 +371,7 @@ describe( 'PlainTableOutput', () => {
 				it( 'tableAlignment', () => {
 					model.change( writer => writer.setAttribute( 'tableAlignment', 'right', table ) );
 
-					assertPlainTableStyle( editor, 'float:right;' );
+					assertPlainTableClass( editor, 'table-style-align-right' );
 
 					model.change( writer => writer.removeAttribute( 'tableAlignment', table ) );
 
@@ -440,7 +498,7 @@ describe( 'PlainTableOutput', () => {
 
 			it( 'should not convert image captions', async () => {
 				const testEditor = await ClassicTestEditor.create( editorElement, {
-					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput, ClipboardPipeline ],
+					plugins: [ ArticlePluginSet, Table, TableCaptionEditing, PlainTableOutput, ClipboardPipeline ],
 					image: { toolbar: [ '|' ] }
 				} );
 
@@ -464,7 +522,7 @@ describe( 'PlainTableOutput', () => {
 			// See: https://github.com/ckeditor/ckeditor5/issues/11394
 			it( 'should allow overriding image caption converters', async () => {
 				const testEditor = await ClassicTestEditor.create( editorElement, {
-					plugins: [ ArticlePluginSet, Table, TableCaption, PlainTableOutput, ClipboardPipeline ],
+					plugins: [ ArticlePluginSet, Table, TableCaptionEditing, PlainTableOutput, ClipboardPipeline ],
 					image: { toolbar: [ '|' ] }
 				} );
 
@@ -494,7 +552,7 @@ describe( 'PlainTableOutput', () => {
 			} );
 
 			function createEmptyTable() {
-				setModelData(
+				_setModelData(
 					model,
 					'<table>' +
 						'<tableRow>' +
@@ -512,11 +570,35 @@ describe( 'PlainTableOutput', () => {
 				const tableStyleEntry = tableStyle ? ` style="${ tableStyle }"` : '';
 
 				expect( editor.getData() ).to.equalMarkup(
-					`<table${ tableStyleEntry }>` +
+					`<table class="table"${ tableStyleEntry }>` +
 						'<tbody><tr><td>foo</td></tr></tbody>' +
 					'</table>'
 				);
 			}
+
+			function assertPlainTableClass( editor, tableClass ) {
+				const tableClassEntry = tableClass ? ` ${ tableClass }` : '';
+
+				expect( editor.getData() ).to.equalMarkup(
+					`<table class="table${ tableClassEntry }">` +
+						'<tbody><tr><td>foo</td></tr></tbody>' +
+					'</table>'
+				);
+			}
+		} );
+	} );
+
+	describe( 'upcast', () => {
+		it( 'should consume the `table` class', () => {
+			editor.conversion.for( 'upcast' ).add( dispatcher => {
+				dispatcher.on( 'element:table', ( evt, data, conversionApi ) => {
+					expect( conversionApi.consumable.test( data.viewItem, { classes: [ 'table' ] } ) ).to.be.false;
+				} );
+			}, { priority: 'low' } );
+
+			editor.setData(
+				'<table class="table"><tr><td>foo</td></tr></table>'
+			);
 		} );
 	} );
 } );

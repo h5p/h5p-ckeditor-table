@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/commands/removerowcommand
  */
 
-import { Command } from 'ckeditor5/src/core.js';
-import type { Element, Node } from 'ckeditor5/src/engine.js';
-import type TableUtils from '../tableutils.js';
+import { Command } from '@ckeditor/ckeditor5-core';
+import type { ModelElement, ModelNode } from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../tableutils.js';
 
 /**
  * The remove row command.
@@ -22,7 +22,7 @@ import type TableUtils from '../tableutils.js';
  * editor.execute( 'removeTableRow' );
  * ```
  */
-export default class RemoveRowCommand extends Command {
+export class RemoveRowCommand extends Command {
 	/**
 	 * @inheritDoc
 	 */
@@ -82,9 +82,9 @@ export default class RemoveRowCommand extends Command {
  * - If the row was not the last one, the cell to focus will be in the row that followed it (before removal).
  * - If the row was the last one, the cell to focus will be in the row that preceded it (before removal).
  */
-function getCellToFocus( table: Element, removedRowIndex: number, columnToFocus: number, tableRowCount: number ): Node {
+function getCellToFocus( table: ModelElement, removedRowIndex: number, columnToFocus: number, tableRowCount: number ): ModelNode {
 	// Don't go beyond last row's index.
-	const row = table.getChild( Math.min( removedRowIndex, tableRowCount - 1 ) ) as Element;
+	const row = table.getChild( Math.min( removedRowIndex, tableRowCount - 1 ) ) as ModelElement;
 
 	// Default to first table cell.
 	let cellToFocus = row.getChild( 0 )!;

@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableproperties
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
+import { Plugin } from '@ckeditor/ckeditor5-core';
 
-import TablePropertiesEditing from './tableproperties/tablepropertiesediting.js';
-import TablePropertiesUI from './tableproperties/tablepropertiesui.js';
+import { TablePropertiesEditing } from './tableproperties/tablepropertiesediting.js';
+import { TablePropertiesUI } from './tableproperties/tablepropertiesui.js';
 
 /**
  * The table properties feature. Enables support for setting properties of tables (size, border, background, etc.).
@@ -22,7 +22,7 @@ import TablePropertiesUI from './tableproperties/tablepropertiesui.js';
  * {@link module:table/tableproperties/tablepropertiesediting~TablePropertiesEditing table properties editing feature} and
  * the {@link module:table/tableproperties/tablepropertiesui~TablePropertiesUI table properties UI feature}.
  */
-export default class TableProperties extends Plugin {
+export class TableProperties extends Plugin {
 	/**
 	 * @inheritDoc
 	 */

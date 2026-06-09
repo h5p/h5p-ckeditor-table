@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellwidth/tablecellwidthediting
  */
 
-import { Plugin } from 'ckeditor5/src/core.js';
+import { Plugin } from '@ckeditor/ckeditor5-core';
 
-import TableEditing from './../tableediting.js';
-import TableCellWidthCommand from './commands/tablecellwidthcommand.js';
+import { TableEditing } from './../tableediting.js';
+import { TableCellWidthCommand } from './commands/tablecellwidthcommand.js';
 import { getNormalizedDefaultCellProperties } from '../utils/table-properties.js';
 import { enableProperty } from '../utils/common.js';
 
@@ -20,7 +20,7 @@ import { enableProperty } from '../utils/common.js';
  * Introduces `tableCellWidth` table cell model attribute alongside with its converters
  * and a command.
  */
-export default class TableCellWidthEditing extends Plugin {
+export class TableCellWidthEditing extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
@@ -55,6 +55,8 @@ export default class TableCellWidthEditing extends Plugin {
 		enableProperty( editor.model.schema, editor.conversion, {
 			modelAttribute: 'tableCellWidth',
 			styleName: 'width',
+			attributeName: 'width',
+			attributeType: 'length',
 			defaultValue: defaultTableCellProperties.width
 		} );
 

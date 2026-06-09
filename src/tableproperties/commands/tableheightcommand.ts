@@ -1,15 +1,15 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableproperties/commands/tableheightcommand
  */
 
-import TablePropertyCommand from './tablepropertycommand.js';
+import { TablePropertyCommand } from './tablepropertycommand.js';
 import { addDefaultUnitToNumericValue } from '../../utils/table-properties.js';
-import type { Editor } from 'ckeditor5/src/core.js';
+import type { Editor } from '@ckeditor/ckeditor5-core';
 
 /**
  * The table height command.
@@ -35,7 +35,7 @@ import type { Editor } from 'ckeditor5/src/core.js';
  *
  * will set the `height` attribute to `'50px'` in the model.
  */
-export default class TableHeightCommand extends TablePropertyCommand {
+export class TableHeightCommand extends TablePropertyCommand {
 	/**
 	 * Creates a new `TableHeightCommand` instance.
 	 *

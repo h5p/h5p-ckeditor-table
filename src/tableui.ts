@@ -1,32 +1,30 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableui
  */
 
-import { icons, Plugin, type Command, type Editor } from 'ckeditor5/src/core.js';
+import { Plugin, type Command, type Editor } from '@ckeditor/ckeditor5-core';
+import { IconTable, IconTableColumn, IconTableRow, IconTableMergeCell } from '@ckeditor/ckeditor5-icons';
 import {
 	addListToDropdown,
 	createDropdown,
-	ViewModel,
+	UIModel,
 	SplitButtonView,
 	SwitchButtonView,
 	type DropdownView,
 	type ListDropdownItemDefinition,
 	MenuBarMenuView
-} from 'ckeditor5/src/ui.js';
-import { Collection, type ObservableChangeEvent, type Locale } from 'ckeditor5/src/utils.js';
+} from '@ckeditor/ckeditor5-ui';
+import { Collection, type ObservableChangeEvent, type Locale } from '@ckeditor/ckeditor5-utils';
 
-import InsertTableView from './ui/inserttableview.js';
+import { InsertTableView } from './ui/inserttableview.js';
 
-import tableColumnIcon from './../theme/icons/table-column.svg';
-import tableRowIcon from './../theme/icons/table-row.svg';
-import tableMergeCellIcon from './../theme/icons/table-merge-cell.svg';
-import type InsertTableCommand from './commands/inserttablecommand.js';
-import type MergeCellsCommand from './commands/mergecellscommand.js';
+import { type InsertTableCommand } from './commands/inserttablecommand.js';
+import { type MergeCellsCommand } from './commands/mergecellscommand.js';
 
 /**
  * The table UI plugin. It introduces:
@@ -39,7 +37,7 @@ import type MergeCellsCommand from './commands/mergecellscommand.js';
  *
  * The `'tableColumn'`, `'tableRow'` and `'mergeTableCells'` dropdowns work best with {@link module:table/tabletoolbar~TableToolbar}.
  */
-export default class TableUI extends Plugin {
+export class TableUI extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
@@ -62,6 +60,7 @@ export default class TableUI extends Plugin {
 		const t = this.editor.t;
 		const contentLanguageDirection = editor.locale.contentLanguageDirection;
 		const isContentLtr = contentLanguageDirection === 'ltr';
+		const areTableFootersEnabled = !!editor.config.get( 'table.enableFooters' );
 
 		editor.ui.componentFactory.add( 'insertTable', locale => {
 			const command: InsertTableCommand = editor.commands.get( 'insertTable' )!;
@@ -71,7 +70,7 @@ export default class TableUI extends Plugin {
 
 			// Decorate dropdown's button.
 			dropdownView.buttonView.set( {
-				icon: icons.table,
+				icon: IconTable,
 				label: t( 'Insert table' ),
 				tooltip: true
 			} );
@@ -118,7 +117,7 @@ export default class TableUI extends Plugin {
 
 			menuView.buttonView.set( {
 				label: t( 'Table' ),
-				icon: icons.table
+				icon: IconTable
 			} );
 
 			menuView.panelView.children.add( insertTableView );
@@ -169,7 +168,7 @@ export default class TableUI extends Plugin {
 				}
 			] as Array<ListDropdownItemDefinition>;
 
-			return this._prepareDropdown( t( 'Column' ), tableColumnIcon, options, locale );
+			return this._prepareDropdown( t( 'Column' ), IconTableColumn, options, locale );
 		} );
 
 		editor.ui.componentFactory.add( 'tableRow', locale => {
@@ -179,6 +178,14 @@ export default class TableUI extends Plugin {
 					model: {
 						commandName: 'setTableRowHeader',
 						label: t( 'Header row' ),
+						bindIsOn: true
+					}
+				},
+				areTableFootersEnabled && {
+					type: 'switchbutton',
+					model: {
+						commandName: 'setTableFooterRow',
+						label: t( 'Footer row' ),
 						bindIsOn: true
 					}
 				},
@@ -211,9 +218,9 @@ export default class TableUI extends Plugin {
 						label: t( 'Select row' )
 					}
 				}
-			] as Array<ListDropdownItemDefinition>;
+			].filter( Boolean ) as Array<ListDropdownItemDefinition>;
 
-			return this._prepareDropdown( t( 'Row' ), tableRowIcon, options, locale );
+			return this._prepareDropdown( t( 'Row' ), IconTableRow, options, locale );
 		} );
 
 		editor.ui.componentFactory.add( 'mergeTableCells', locale => {
@@ -263,7 +270,7 @@ export default class TableUI extends Plugin {
 				}
 			] as Array<ListDropdownItemDefinition>;
 
-			return this._prepareMergeSplitButtonDropdown( t( 'Merge cells' ), tableMergeCellIcon, options, locale );
+			return this._prepareMergeSplitButtonDropdown( t( 'Merge cells' ), IconTableMergeCell, options, locale );
 		} );
 	}
 
@@ -385,7 +392,7 @@ function addListOption(
 	itemDefinitions: Collection<ListDropdownItemDefinition>
 ) {
 	if ( option.type === 'button' || option.type === 'switchbutton' ) {
-		const model = option.model = new ViewModel( option.model );
+		const model = option.model = new UIModel( option.model );
 		const { commandName, bindIsOn } = option.model;
 		const command = editor.commands.get( commandName as string )!;
 

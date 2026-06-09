@@ -82,4 +82,4 @@ Build the production ready package, to be loaded into the ckeditor like describe
 
 ## License
 
-The `@h5p/ckeditor5-table` package is available under [MIT license](https://opensource.org/licenses/MIT).
+The `@h5p/ckeditor5-table` package, as a fork of the offical CKEditor plugin, is available under the [GNU General Public License Version 2 or later](https://www.gnu.org/licenses/gpl.html),

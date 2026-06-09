@@ -1,6 +1,6 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
@@ -20,12 +20,17 @@ import {
 	type ColorSelectorExecuteEvent,
 	type ColorSelectorColorPickerCancelEvent,
 	type FocusableView
-} from 'ckeditor5/src/ui.js';
+} from '@ckeditor/ckeditor5-ui';
 
-import { FocusTracker, KeystrokeHandler, type Locale } from 'ckeditor5/src/utils.js';
+import { FocusTracker, KeystrokeHandler, type Locale } from '@ckeditor/ckeditor5-utils';
 
 import '../../theme/colorinput.css';
 
+/**
+ * The options for the color input view.
+ *
+ * @internal
+ */
 export type ColorInputViewOptions = {
 	colorDefinitions: Array<ColorDefinition>;
 	columns: number;
@@ -39,7 +44,7 @@ export type ColorInputViewOptions = {
  *
  * @internal
  */
-export default class ColorInputView extends View implements FocusableView {
+export class ColorInputView extends View implements FocusableView {
 	/**
 	 * The value of the input.
 	 *

@@ -1,14 +1,14 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tableproperties/commands/tablealignmentcommand
  */
 
-import type { Editor } from 'ckeditor5/src/core.js';
-import TablePropertyCommand from './tablepropertycommand.js';
+import type { Editor } from '@ckeditor/ckeditor5-core';
+import { TablePropertyCommand } from './tablepropertycommand.js';
 
 /**
  * The table alignment command.
@@ -24,7 +24,7 @@ import TablePropertyCommand from './tablepropertycommand.js';
  * } );
  * ```
  */
-export default class TableAlignmentCommand extends TablePropertyCommand {
+export class TableAlignmentCommand extends TablePropertyCommand {
 	/**
 	 * Creates a new `TableAlignmentCommand` instance.
 	 *

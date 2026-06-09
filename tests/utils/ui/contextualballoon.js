@@ -1,19 +1,18 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
-import Table from '../../../src/table.js';
-import TableCellProperties from '../../../src/tablecellproperties.js';
-import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
-import ClipboardPipeline from '@ckeditor/ckeditor5-clipboard/src/clipboardpipeline.js';
-import View from '@ckeditor/ckeditor5-ui/src/view.js';
-import BalloonPanelView from '@ckeditor/ckeditor5-ui/src/panel/balloon/balloonpanelview.js';
+import { ClassicEditor } from '@ckeditor/ckeditor5-editor-classic';
+import { Table } from '../../../src/table.js';
+import { TableCellProperties } from '../../../src/tablecellproperties.js';
+import { global } from '@ckeditor/ckeditor5-utils';
+import { Paragraph } from '@ckeditor/ckeditor5-paragraph';
+import { ClipboardPipeline } from '@ckeditor/ckeditor5-clipboard';
+import { View, BalloonPanelView } from '@ckeditor/ckeditor5-ui';
 
-import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
-import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
+import { _setModelData } from '@ckeditor/ckeditor5-engine';
+import { testUtils } from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
 import { modelTable } from '../../_utils/utils.js';
 import { getBalloonCellPositionData, repositionContextualBalloon } from '../../../src/utils/ui/contextualballoon.js';
 
@@ -60,7 +59,7 @@ describe( 'table utils', () => {
 						}
 					} );
 
-					setData( editor.model,
+					_setModelData( editor.model,
 						'<table><tableRow>' +
 						'<tableCell><paragraph>foo</paragraph></tableCell>' +
 						'<tableCell><paragraph>[bar]</paragraph></tableCell>' +
@@ -89,7 +88,7 @@ describe( 'table utils', () => {
 				it( 'should not engage with no table is selected', () => {
 					const spy = sinon.spy( balloon, 'updatePosition' );
 
-					setData( editor.model, '<paragraph>foo</paragraph>' );
+					_setModelData( editor.model, '<paragraph>foo</paragraph>' );
 
 					repositionContextualBalloon( editor, 'cell' );
 					sinon.assert.notCalled( spy );
@@ -111,7 +110,7 @@ describe( 'table utils', () => {
 						}
 					} );
 
-					setData( editor.model,
+					_setModelData( editor.model,
 						'<table><tableRow>' +
 						'<tableCell><paragraph>foo</paragraph></tableCell>' +
 						'<tableCell><paragraph>[bar]</paragraph></tableCell>' +
@@ -149,7 +148,7 @@ describe( 'table utils', () => {
 						}
 					} );
 
-					setData( editor.model,
+					_setModelData( editor.model,
 						'[<table><tableRow>' +
 						'<tableCell><paragraph>foo</paragraph></tableCell>' +
 						'<tableCell><paragraph>bar</paragraph></tableCell>' +
@@ -176,7 +175,7 @@ describe( 'table utils', () => {
 				it( 'should not engage with no table is selected', () => {
 					const spy = sinon.spy( balloon, 'updatePosition' );
 
-					setData( editor.model, '<paragraph>foo</paragraph>' );
+					_setModelData( editor.model, '<paragraph>foo</paragraph>' );
 
 					repositionContextualBalloon( editor, 'table' );
 					sinon.assert.notCalled( spy );
@@ -188,7 +187,7 @@ describe( 'table utils', () => {
 			let modelRoot;
 
 			beforeEach( () => {
-				setData( editor.model, modelTable( [
+				_setModelData( editor.model, modelTable( [
 					[ '11[]', '12', '13' ],
 					[ '21', '22', '23' ],
 					[ '31', '32', '33' ]

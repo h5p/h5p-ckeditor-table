@@ -1,22 +1,23 @@
 /**
- * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
- * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
+ * @license Copyright (c) 2003-2026, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-licensing-options
  */
 
 /**
  * @module table/tablecellproperties/commands/tablecellpropertycommand
  */
 
-import { Command, type Editor } from 'ckeditor5/src/core.js';
-import type { Element, Batch } from 'ckeditor5/src/engine.js';
-import type TableUtils from '../../tableutils.js';
+import { Command, type Editor } from '@ckeditor/ckeditor5-core';
+import type { ModelElement, Batch, ModelWriter } from '@ckeditor/ckeditor5-engine';
+import { type TableUtils } from '../../tableutils.js';
+import { getSelectionAffectedTable } from '../../utils/common.js';
 
 /**
  * The table cell attribute command.
  *
  * The command is a base command for other table cell property commands.
  */
-export default class TableCellPropertyCommand extends Command {
+export class TableCellPropertyCommand extends Command {
 	/**
 	 * The attribute that will be set by the command.
 	 */
@@ -24,8 +25,20 @@ export default class TableCellPropertyCommand extends Command {
 
 	/**
 	 * The default value for the attribute.
+	 *
+	 * @readonly
 	 */
-	protected readonly _defaultValue: string;
+	protected _defaultValue: string | undefined;
+
+	/**
+	 * The default value for the attribute for the content table.
+	 */
+	private readonly _defaultContentTableValue: string | undefined;
+
+	/**
+	 * The default value for the attribute for the layout table.
+	 */
+	private readonly _defaultLayoutTableValue: string | undefined;
 
 	/**
 	 * Creates a new `TableCellPropertyCommand` instance.
@@ -38,7 +51,29 @@ export default class TableCellPropertyCommand extends Command {
 		super( editor );
 
 		this.attributeName = attributeName;
-		this._defaultValue = defaultValue;
+		this._defaultContentTableValue = defaultValue;
+
+		// Hardcoded defaults for layout table.
+		switch ( attributeName ) {
+			case 'tableCellType':
+				this._defaultLayoutTableValue = 'data';
+				break;
+
+			case 'tableCellBorderStyle':
+				this._defaultLayoutTableValue = 'none';
+				break;
+
+			case 'tableCellHorizontalAlignment':
+				this._defaultLayoutTableValue = 'left';
+				break;
+
+			case 'tableCellVerticalAlignment':
+				this._defaultLayoutTableValue = 'middle';
+				break;
+
+			default:
+				this._defaultLayoutTableValue = undefined;
+		}
 	}
 
 	/**
@@ -46,8 +81,15 @@ export default class TableCellPropertyCommand extends Command {
 	 */
 	public override refresh(): void {
 		const editor = this.editor;
+		const selection = editor.model.document.selection;
 		const tableUtils: TableUtils = this.editor.plugins.get( 'TableUtils' );
-		const selectedTableCells = tableUtils.getSelectionAffectedTableCells( editor.model.document.selection );
+
+		const selectedTableCells = tableUtils.getSelectionAffectedTableCells( selection );
+		const table = getSelectionAffectedTable( selection );
+
+		this._defaultValue = !table || table.getAttribute( 'tableType' ) !== 'layout' ?
+			this._defaultContentTableValue :
+			this._defaultLayoutTableValue;
 
 		this.isEnabled = !!selectedTableCells.length;
 		this.value = this._getSingleValue( selectedTableCells );
@@ -75,13 +117,19 @@ export default class TableCellPropertyCommand extends Command {
 			} else {
 				tableCells.forEach( tableCell => writer.removeAttribute( this.attributeName, tableCell ) );
 			}
+
+			this.fire<TableCellPropertyCommandAfterExecuteEvent>( 'afterExecute', {
+				writer,
+				tableCells,
+				valueToSet
+			} );
 		} );
 	}
 
 	/**
 	 * Returns the attribute value for a table cell.
 	 */
-	protected _getAttribute( tableCell: Element | undefined ): unknown {
+	protected _getAttribute( tableCell: ModelElement | undefined ): unknown {
 		if ( !tableCell ) {
 			return;
 		}
@@ -110,7 +158,7 @@ export default class TableCellPropertyCommand extends Command {
 	 * Returns a single value for all selected table cells. If the value is the same for all cells,
 	 * it will be returned (`undefined` otherwise).
 	 */
-	private _getSingleValue( tableCells: Array<Element> ) {
+	private _getSingleValue( tableCells: Array<ModelElement> ) {
 		const firstCellValue = this._getAttribute( tableCells[ 0 ] );
 
 		const everyCellHasAttribute = tableCells.every( tableCells => this._getAttribute( tableCells ) === firstCellValue );
@@ -118,3 +166,23 @@ export default class TableCellPropertyCommand extends Command {
 		return everyCellHasAttribute ? firstCellValue : undefined;
 	}
 }
+
+/**
+ * Fired after the {@link module:table/tablecellproperties/commands/tablecellpropertycommand~TableCellPropertyCommand}
+ *
+ * @eventName ~TableCellPropertyCommand#afterExecute
+ */
+export type TableCellPropertyCommandAfterExecuteEvent = {
+	name: 'afterExecute';
+	args: [ data: TableCellPropertyCommandAfterExecuteEventData ];
+};
+
+/**
+ * The data of the
+ * {@link module:table/tablecellproperties/commands/tablecellpropertycommand~TableCellPropertyCommandAfterExecuteEvent} event.
+ */
+export type TableCellPropertyCommandAfterExecuteEventData = {
+	writer: ModelWriter;
+	tableCells: Array<ModelElement>;
+	valueToSet: unknown;
+};
