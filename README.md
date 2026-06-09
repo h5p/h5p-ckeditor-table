@@ -5,12 +5,54 @@ This package is based on the official CKEditor 5 Table package, with a few H5P s
 
 ## Table of contents
 
+* [Changes introduced in the H5P version](#changes-introduced-in-the-h5p-version)
 * [Local development of the plugin](#local-development-of-the-plugin)
 * [Updating the plugin to new official CKE version](#updating-the-plugin-to-new-official-cke-version)
 * [Available scripts](#available-scripts)
   * [`dll:build`](#dllbuild)
   * [`build`](#build)
 * [License](#license)
+
+## Changes introduced in the H5P version
+Most of the code is unchanged, except for the following changes
+
+### Underline style ([JI-5366](https://h5ptechnology.atlassian.net/browse/JI-5366))
+To match the old style of tables from when we used CKE4, we've added a custom border style called "Underline"
+
+**Affected files:**
+* `src/utils/ui/table-properties.ts`
+* All language files
+
+### Table width change prevention ([JI-5880](https://h5ptechnology.atlassian.net/browse/JI-5880))
+Tables look different in the editor vs, the view, because the width is in pixels. We've added a helper function and set max width to avoid this.
+
+**Affected files:**
+* `src/tablecolumnresize/tablecolumnresizeediting.ts`
+* `src/tablecolumnresize/tablewidthscommand.ts`
+* `src/tablecolumnresize/utils.ts` - Helper functions getTableWidthInEms & getElementWidthInEms
+
+### Prevent overflow of nested tables ([JI-5366](https://h5ptechnology.atlassian.net/browse/JI-5366))
+Nested tables were overflowing their parents, so we added a fix for that.
+
+**Affected files:**
+* `src/tablecolumnresize/tablecolumnresizeediting.ts`
+* `src/tablecolumnresize/tablewidthscommand.ts`
+
+### Balloon positions ([JI-5884](https://h5ptechnology.atlassian.net/browse/JI-5884))
+The balloon menus don't always fit the narrow H5P editor/Free Text Question, so we added two other positions (without arrows)
+
+**Affected files:**
+* `src/utils/ui/contextualballoon.ts`
+
+### Other differences
+Other files have also been changed to be able to build and use it outside of the CKE mono-repo
+
+**Affected files:**
+* `package.json`
+* `README.md`
+* `tsconfig.json`
+* `webpack.config.js`
+* Generated files as a result of other changes (e.g. package-lock.json, build files)
 
 ## Local development of the plugin
 
@@ -46,7 +88,7 @@ git checkout h5p/master
 git checkout -b new-h5p-branch
 git merge --allow-unrelated-histories new-cke-branch
 ```
-Fix the merge conflicts. **CAREFUL not to override configs/build scripts etc.**
+Fix the merge conflicts. **CAREFUL not to override configs/build scripts etc.** See [Changes introduced in the H5P version](#changes-introduced-in-the-h5p-version) to avoid reverting an intentional fix when solving merge conflicts.
 
 ```
 npm install && npm run build
