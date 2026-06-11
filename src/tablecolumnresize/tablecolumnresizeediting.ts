@@ -445,16 +445,22 @@ export class TableColumnResizeEditing extends Plugin {
 		// Table max width style
 		conversion.for( 'upcast' ).attributeToAttribute( {
 			view: {
-				name: 'figure',
-				key: 'style',
-				value: {
-					'max-width': /[\s\S]+/
+				name: /^(figure|table)$/,
+				styles: {
+					maxWidth: /[\s\S]+/
 				}
 			},
 			model: {
-				name: 'table',
 				key: 'maxWidth',
-				value: (viewElement: ViewElement) => viewElement.getStyle('max-width')
+				value: (viewElement: ViewElement) => {
+					const parent = viewElement.parent!;
+
+					if ( parent.is( 'element', 'figure' ) ) {
+						return;
+					}
+
+					return viewElement.getStyle( 'max-width' );
+				}
 			}
 		} );
 
@@ -467,7 +473,7 @@ export class TableColumnResizeEditing extends Plugin {
 				name: 'figure',
 				key: 'style',
 				value: {
-					'max-width': maxWidth
+					maxWidth
 				}
 			})
 		} );

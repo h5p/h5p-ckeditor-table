@@ -104,23 +104,81 @@ All the scripts can be executed by running `npm run <script>`. Pre and post comm
 
 The following scripts are available in the package.
 
-### `dll:build`
+### `build`
 
-Creates a DLL-compatible package build which can be loaded into an editor using [DLL builds](https://ckeditor.com/docs/ckeditor5/latest/builds/guides/development/dll-builds.html).
+Build the production ready package, to be loaded into the ckeditor like described above.
+
+### `test`
+
+Allows executing unit tests for the package specified in the `tests/` directory. To check the code coverage, add the `--coverage` modifier. See other [CLI flags](https://vitest.dev/guide/cli.html) in Vitest.
 
 Examples:
 
 ```bash
-# Build the DLL file that is ready to publish.
-npm run dll:build
+# Execute tests.
+npm run test
 
-# Build the DLL file and listen to changes in its sources.
-npm run dll:build -- --watch
+# Generate code coverage report after each change in the sources.
+npm run test -- --coverage
 ```
 
-### `build`
+### `lint`
 
-Build the production ready package, to be loaded into the ckeditor like described above.
+Runs ESLint, which analyzes the code (all `*.ts` files) to quickly find problems.
+
+Examples:
+
+```bash
+# Execute eslint.
+npm run lint
+
+# Auto-fix problems.
+npm run lint -- --fix
+```
+
+### `stylelint`
+
+Similar to the `lint` task, stylelint analyzes the CSS code (`*.css` files in the `theme/` directory) in the package.
+
+Examples:
+
+```bash
+# Execute stylelint.
+npm run stylelint
+```
+
+### `translations:synchronize`
+
+Synchronizes translation messages (arguments of the `t()` function) by performing the following steps:
+
+ * Collect all translation messages from the package by finding `t()` calls in source files.
+ * Detect if translation context is valid, i.e. whether the provided values do not interfere with the values specified in the `@ckeditor/ckeditor5-core` package.
+ * If there are no validation errors, update all translation files (`*.po` files) to be in sync with the context file:
+   * unused translation entries are removed,
+   * missing translation entries are added with empty string as the message translation,
+   * missing translation files are created for languages that do not have own `*.po` file yet.
+
+The task may end with an error if one of the following conditions is met:
+
+* Found the `Unused context` error &ndash; entries specified in the `lang/contexts.json` file are not used in source files. They should be removed.
+* Found the `Duplicated contex` error &ndash; some of the entries are duplicated. Consider removing them from the `lang/contexts.json` file, or rewriting them.
+* Found the `Missing context` error &ndash; entries specified in source files are not described in the `lang/contexts.json` file. They should be added.
+
+Examples:
+
+```bash
+npm run translations:synchronize
+```
+
+### `translations:validate`
+
+Peforms only validation steps as described in [`translations:synchronize`](#translationssynchronize) script, but without modifying any files. It only checks the correctness of the context file against the `t()` function calls.
+
+Examples:
+
+```bash
+npm run translations:validate
+```
 
 ## License
 

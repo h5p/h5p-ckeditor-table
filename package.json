@@ -39,8 +39,11 @@
   "devDependencies": {
     "@ckeditor/ckeditor5-alignment": "48.1.1",
     "@ckeditor/ckeditor5-autoformat": "48.1.1",
+    "@ckeditor/ckeditor5-autosave": "48.1.1",
     "@ckeditor/ckeditor5-basic-styles": "48.1.1",
     "@ckeditor/ckeditor5-block-quote": "48.1.1",
+    "@ckeditor/ckeditor5-dev-build-tools": "56.1.0",
+    "@ckeditor/ckeditor5-dev-translations": "56.1.0",
     "@ckeditor/ckeditor5-editor-classic": "48.1.1",
     "@ckeditor/ckeditor5-editor-multi-root": "48.1.1",
     "@ckeditor/ckeditor5-essentials": "48.1.1",
@@ -56,8 +59,16 @@
     "@ckeditor/ckeditor5-paragraph": "48.1.1",
     "@ckeditor/ckeditor5-source-editing": "48.1.1",
     "@ckeditor/ckeditor5-undo": "48.1.1",
-    "@ckeditor/ckeditor5-autosave": "48.1.1",
-    "json-diff": "^0.5.4"
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "eslint-config-ckeditor5": "^16.0.0",
+    "eslint-plugin-ckeditor5-rules": "^16.0.0",
+    "globals": "^16.1.0",
+    "json-diff": "^0.5.4",
+    "typescript": "5.5.4",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.7",
+    "webdriverio": "^9.19.2"
   },
   "repository": {
     "type": "git",
@@ -69,6 +80,15 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p ./tsconfig.json"
+    "build": "npm run build:types && npm run build:npm && npm run build:browser",
+    "build:npm": "vite build --mode npm",
+    "build:browser": "vite build --mode browser",
+    "build:types": "tsc -p tsconfig.build.json",
+    "test": "vitest",
+    "test:debug": "vitest --inspect-brk --no-file-parallelism --browser.headless=false",
+    "lint": "eslint",
+    "translations:synchronize": "node ./scripts/synchronize-translations.js",
+    "translations:validate": "node ./scripts/synchronize-translations.js --validate-only",
+    "prepublishOnly": "npm run build"
   }
 }

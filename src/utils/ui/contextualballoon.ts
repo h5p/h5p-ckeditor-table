@@ -49,7 +49,7 @@ const BALLOON_POSITIONS = /* #__PURE__ */ ( () => [
 	BalloonPanelView.defaultPositions.viewportStickyNorth,
 	middleNoArrow,
 	viewportCentreNoArrow
-];
+] )();
 
 /**
  * A helper utility that positions the
