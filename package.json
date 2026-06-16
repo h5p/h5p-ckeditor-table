@@ -10,20 +10,12 @@
     "ckeditor5-plugin"
   ],
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./dist/*": "./src/*",
-    "./*": "./*"
-  },
-  "publishConfig": {
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": "./dist/index.js",
-      "./dist/*": "./dist/*",
-      "./package.json": "./package.json"
-    }
+    ".": "./dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-clipboard": "48.1.1",
