@@ -107,10 +107,6 @@ describe( 'TableUI', () => {
 		return editor.destroy();
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableUI.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableUI.isPremiumPlugin ).to.be.false;
 	} );

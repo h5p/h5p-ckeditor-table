@@ -33,13 +33,6 @@ export class TableCellProperties extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
-	public static override get isOfficialPlugin(): true {
-		return true;
-	}
-
-	/**
-	 * @inheritDoc
-	 */
 	public static get requires() {
 		return [ TableCellPropertiesEditing, TableCellPropertiesUI ] as const;
 	}

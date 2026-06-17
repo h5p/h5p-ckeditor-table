@@ -6,10 +6,6 @@
 import { TableCaption } from '../../src/tablecaption.js';
 
 describe( 'TableCaption', () => {
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableCaption.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableCaption.isPremiumPlugin ).to.be.false;
 	} );

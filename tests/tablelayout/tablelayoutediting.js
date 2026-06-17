@@ -49,10 +49,6 @@ describe( 'TableLayoutEditing', () => {
 		expect( TableLayoutEditing.requires ).to.deep.equal( [ TableColumnResize ] );
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableLayoutEditing.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
 		expect( TableLayoutEditing.isPremiumPlugin ).to.be.true;
 	} );

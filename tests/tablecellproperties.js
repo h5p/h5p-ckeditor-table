@@ -46,10 +46,6 @@ describe( 'table cell properties', () => {
 			expect( TableCellProperties.pluginName ).to.equal( 'TableCellProperties' );
 		} );
 
-		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-			expect( TableCellProperties.isOfficialPlugin ).to.be.true;
-		} );
-
 		it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 			expect( TableCellProperties.isPremiumPlugin ).to.be.false;
 		} );

@@ -57,13 +57,6 @@ export class TableLayoutEditing extends Plugin {
 	/**
 	 * @inheritDoc
 	 */
-	public static override get isOfficialPlugin(): true {
-		return true;
-	}
-
-	/**
-	 * @inheritDoc
-	 */
 	public static override get isPremiumPlugin(): true {
 		return true;
 	}

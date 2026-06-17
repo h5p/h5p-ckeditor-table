@@ -41,10 +41,6 @@ describe( 'TableLayoutUI', () => {
 		return editor.destroy();
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableLayoutUI.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableLayoutUI.isPremiumPlugin ).to.be.false;
 	} );

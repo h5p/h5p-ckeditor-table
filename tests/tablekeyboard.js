@@ -52,10 +52,6 @@ describe( 'TableKeyboard', () => {
 		expect( TableKeyboard.pluginName ).to.equal( 'TableKeyboard' );
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableKeyboard.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableKeyboard.isPremiumPlugin ).to.be.false;
 	} );

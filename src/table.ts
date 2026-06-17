@@ -47,11 +47,4 @@ export class Table extends Plugin {
 	public static get pluginName() {
 		return 'Table' as const;
 	}
-
-	/**
-	 * @inheritDoc
-	 */
-	public static override get isOfficialPlugin(): true {
-		return true;
-	}
 }

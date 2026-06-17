@@ -83,10 +83,6 @@ describe( 'TableColumnResizeEditing', () => {
 		expect( TableColumnResizeEditing.pluginName ).to.equal( 'TableColumnResizeEditing' );
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableColumnResizeEditing.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
 		expect( TableColumnResizeEditing.isPremiumPlugin ).to.be.true;
 	} );

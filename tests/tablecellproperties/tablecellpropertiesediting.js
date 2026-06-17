@@ -45,10 +45,6 @@ describe( 'table cell properties', () => {
 			expect( TableCellPropertiesEditing.pluginName ).to.equal( 'TableCellPropertiesEditing' );
 		} );
 
-		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-			expect( TableCellPropertiesEditing.isOfficialPlugin ).to.be.true;
-		} );
-
 		it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
 			expect( TableCellPropertiesEditing.isPremiumPlugin ).to.be.true;
 		} );

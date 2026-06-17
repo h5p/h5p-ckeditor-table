@@ -35,10 +35,6 @@ describe( 'TableCaptionUI', () => {
 		return editor.destroy();
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableCaptionUI.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableCaptionUI.isPremiumPlugin ).to.be.false;
 	} );

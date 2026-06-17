@@ -51,10 +51,6 @@ describe( 'table properties', () => {
 			expect( TablePropertiesEditing.pluginName ).to.equal( 'TablePropertiesEditing' );
 		} );
 
-		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-			expect( TablePropertiesEditing.isOfficialPlugin ).to.be.true;
-		} );
-
 		it( 'should have `isPremiumPlugin` static flag set to `true`', () => {
 			expect( TablePropertiesEditing.isPremiumPlugin ).to.be.true;
 		} );

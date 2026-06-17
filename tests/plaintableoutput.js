@@ -41,10 +41,6 @@ describe( 'PlainTableOutput', () => {
 		expect( PlainTableOutput.pluginName ).to.equal( 'PlainTableOutput' );
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( PlainTableOutput.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( PlainTableOutput.isPremiumPlugin ).to.be.false;
 	} );

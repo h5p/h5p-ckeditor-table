@@ -35,10 +35,6 @@ describe( 'TableMouse', () => {
 			expect( TableMouse.pluginName ).to.equal( 'TableMouse' );
 		} );
 
-		it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-			expect( TableMouse.isOfficialPlugin ).to.be.true;
-		} );
-
 		it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 			expect( TableMouse.isPremiumPlugin ).to.be.false;
 		} );

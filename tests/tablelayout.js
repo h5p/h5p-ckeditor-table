@@ -36,10 +36,6 @@ describe( 'TableLayout', () => {
 		expect( TableLayout.pluginName ).to.equal( 'TableLayout' );
 	} );
 
-	it( 'should have `isOfficialPlugin` static flag set to `true`', () => {
-		expect( TableLayout.isOfficialPlugin ).to.be.true;
-	} );
-
 	it( 'should have `isPremiumPlugin` static flag set to `false`', () => {
 		expect( TableLayout.isPremiumPlugin ).to.be.false;
 	} );
