@@ -445,7 +445,7 @@ export class TableColumnResizeEditing extends Plugin {
 			},
 			model: {
 				key: 'maxWidth',
-				value: (viewElement: ViewElement) => {
+				value: ( viewElement: ViewElement ) => {
 					const parent = viewElement.parent!;
 
 					if ( parent.is( 'element', 'figure' ) ) {
@@ -457,18 +457,18 @@ export class TableColumnResizeEditing extends Plugin {
 			}
 		} );
 
-		conversion.for('downcast').attributeToAttribute( {
+		conversion.for( 'downcast' ).attributeToAttribute( {
 			model: {
 				name: 'table',
 				key: 'maxWidth'
 			},
-			view: (maxWidth: string) => ({
+			view: ( maxWidth: string ) => ( {
 				name: 'figure',
 				key: 'style',
 				value: {
 					maxWidth
 				}
-			})
+			} )
 		} );
 
 		conversion.elementToElement( { model: 'tableColumnGroup', view: 'colgroup' } );

@@ -127,16 +127,16 @@ export function getTableWidthInPixels( modelTable: ModelElement, editor: Editor 
  * @param editor The editor instance.
  * @returns The width of the table in ems.
  */
-export function getTableWidthInEms(modelTable: ModelElement, editor: Editor): number {
-    // It is possible for a table to not have a <tbody> element - see #11878.
-    const referenceElement =
-			getChildrenViewElement(modelTable, 'tbody', editor) ||
-			getChildrenViewElement(modelTable, 'thead', editor) ||
+export function getTableWidthInEms( modelTable: ModelElement, editor: Editor ): number {
+	// It is possible for a table to not have a <tbody> element - see #11878.
+	const referenceElement =
+			getChildrenViewElement( modelTable, 'tbody', editor ) ||
+			getChildrenViewElement( modelTable, 'thead', editor ) ||
 			getChildrenViewElement( modelTable, 'tfoot', editor );
 
-    const domReferenceElement = editor.editing.view.domConverter.mapViewToDom( referenceElement! )!;
+	const domReferenceElement = editor.editing.view.domConverter.mapViewToDom( referenceElement! )!;
 
-    return getElementWidthInEms( domReferenceElement );
+	return getElementWidthInEms( domReferenceElement );
 }
 
 /**
@@ -184,24 +184,24 @@ export function getElementWidthInPixels( domElement: HTMLElement ): number {
  * @param domElement A DOM element.
  * @returns The width of the DOM element in ems.
  */
-export function getElementWidthInEms(domElement: HTMLElement): number {
-    const styles = global.window.getComputedStyle(domElement);
-    let width = parseFloat(styles.width);
-    // In the 'border-box' box sizing algorithm, the element's width
-    // already includes the padding and border width (#12335).
-    if (styles.boxSizing === 'border-box') {
-        width = parseFloat(styles.width) -
-            parseFloat(styles.paddingLeft) -
-            parseFloat(styles.paddingRight) -
-            parseFloat(styles.borderLeftWidth) -
-            parseFloat(styles.borderRightWidth);
-    }
+export function getElementWidthInEms( domElement: HTMLElement ): number {
+	const styles = global.window.getComputedStyle( domElement );
+	let width = parseFloat( styles.width );
+	// In the 'border-box' box sizing algorithm, the element's width
+	// already includes the padding and border width (#12335).
+	if ( styles.boxSizing === 'border-box' ) {
+		width = parseFloat( styles.width ) -
+            parseFloat( styles.paddingLeft ) -
+            parseFloat( styles.paddingRight ) -
+            parseFloat( styles.borderLeftWidth ) -
+            parseFloat( styles.borderRightWidth );
+	}
 
-    return width / parseFloat(
-        getComputedStyle(
-            document.querySelector('html')!
-        ).fontSize
-    );
+	return width / parseFloat(
+		getComputedStyle(
+			document.querySelector( 'html' )!
+		).fontSize
+	);
 }
 
 /**

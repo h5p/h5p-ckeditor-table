@@ -45,32 +45,32 @@ export class TableWidthsCommand extends Command {
 		}
 
 		model.change( writer => {
-			const tableWalker = new TableWalker(table, { includeAllSlots: true });
-            const childTables = [];
-            for (const tableSlot of tableWalker) {
-                childTables.push(...Array.from(tableSlot.cell.getChildren())
-                .filter(child => child.getAttribute('name') === 'table'));
-            }
+			const tableWalker = new TableWalker( table, { includeAllSlots: true } );
+			const childTables = [];
+			for ( const tableSlot of tableWalker ) {
+				childTables.push( ...Array.from( tableSlot.cell.getChildren() )
+					.filter( child => child.getAttribute( 'name' ) === 'table' ) );
+			}
 
-            if (tableWidth) {
-                writer.setAttribute('tableWidth', tableWidth, table);
-                // Prevent overflow for nested tables
-                if (table.findAncestor('table')?.getAttribute('tableWidth')) {
-                    writer.setAttribute('maxWidth', '100%', table);
-                }
-                for (const child of childTables) {
-                    writer.setAttribute('maxWidth', '100%', child);
-                }
+			if ( tableWidth ) {
+				writer.setAttribute( 'tableWidth', tableWidth, table );
+				// Prevent overflow for nested tables
+				if ( table.findAncestor( 'table' )?.getAttribute( 'tableWidth' ) ) {
+					writer.setAttribute( 'maxWidth', '100%', table );
+				}
+				for ( const child of childTables ) {
+					writer.setAttribute( 'maxWidth', '100%', child );
+				}
 
-                writer.setAttribute('tableWidth', getTableWidthInEms(table, this.editor) + 'em', table);
-            }
-            else {
-                writer.removeAttribute('tableWidth', table);
+				writer.setAttribute( 'tableWidth', getTableWidthInEms( table, this.editor ) + 'em', table );
+			}
+			else {
+				writer.removeAttribute( 'tableWidth', table );
 
-                for (const child of childTables) {
-                    writer.removeAttribute('maxWidth', child);
-                }
-            }
+				for ( const child of childTables ) {
+					writer.removeAttribute( 'maxWidth', child );
+				}
+			}
 
 			const tableColumnGroup = plugins
 				.get( 'TableColumnResizeEditing' )

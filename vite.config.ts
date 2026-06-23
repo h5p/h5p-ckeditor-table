@@ -50,7 +50,7 @@ export default defineConfig( ( { mode } ) => {
 		build: {
 			emptyOutDir: false,
 			target: 'es2022'
-		},
+		}
 	};
 
 	/**

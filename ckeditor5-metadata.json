@@ -229,7 +229,10 @@
 				},
 				{
 					"elements": "col",
-					"styles": "width"
+					"styles": [
+						"width",
+						"max-width"
+					]
 				}
 			]
 		},

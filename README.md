@@ -30,6 +30,7 @@ Tables look different in the editor vs, the view, because the width is in pixels
 * `src/tablecolumnresize/tablecolumnresizeediting.ts`
 * `src/tablecolumnresize/tablewidthscommand.ts`
 * `src/tablecolumnresize/utils.ts` - Helper functions getTableWidthInEms & getElementWidthInEms
+* `ckeditor5-metadata.json`
 
 ### Prevent overflow of nested tables ([JI-5366](https://h5ptechnology.atlassian.net/browse/JI-5366))
 Nested tables were overflowing their parents, so we added a fix for that.
@@ -53,6 +54,7 @@ Other files have also been changed to be able to build and use it outside of the
 * `tsconfig.json`
 * `webpack.config.js`
 * Generated files as a result of other changes (e.g. package-lock.json, build files)
+* Removed the isOfficialPlugin() function from all plugins to avoid impersonating official code(defaults to false)
 
 ## Local development of the plugin
 

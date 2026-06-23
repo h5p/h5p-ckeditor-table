@@ -15,16 +15,16 @@ import type { ModelElement, ModelPosition, ModelRange } from '@ckeditor/ckeditor
 import { getSelectionAffectedTableWidget, getTableWidgetAncestor } from './widget.js';
 import { getSelectionAffectedTable } from '../common.js';
 
-const middleNoArrow: PositioningFunction = (targetRect: Rect, balloonRect: Rect) => ({
+const middleNoArrow: PositioningFunction = ( targetRect: Rect, balloonRect: Rect ) => ( {
 	top: targetRect.top + targetRect.height / 2 - balloonRect.height / 2,
 	left: targetRect.left + targetRect.width / 2 - balloonRect.width / 2,
 	name: 'middle_arrowless',
 	config: {
 		withArrow: false
 	}
-});
+} );
 
-const viewportCentreNoArrow: PositioningFunction = (targetRect: Rect, balloonRect: Rect, viewportRect: Rect, limiterRect?: Rect) => {
+const viewportCentreNoArrow: PositioningFunction = ( targetRect: Rect, balloonRect: Rect, viewportRect: Rect, limiterRect?: Rect ) => {
 	const boundaryRect = limiterRect || viewportRect;
 
 	return {
@@ -45,7 +45,7 @@ const BALLOON_POSITIONS = /* #__PURE__ */ ( () => [
 	BalloonPanelView.defaultPositions.southArrowNorthWest,
 	BalloonPanelView.defaultPositions.southArrowNorthEast,
 	BalloonPanelView.defaultPositions.westArrowEast,
-  BalloonPanelView.defaultPositions.eastArrowWest,
+	BalloonPanelView.defaultPositions.eastArrowWest,
 	BalloonPanelView.defaultPositions.viewportStickyNorth,
 	middleNoArrow,
 	viewportCentreNoArrow
